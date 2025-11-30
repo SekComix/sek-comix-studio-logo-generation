@@ -6,9 +6,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
     plugins: [react()],
-    // IMPORTANTE: Se il tuo repository si chiama diversamente da "sek-comix-studio",
-    // cambia la riga qui sotto con il nome esatto del tuo repo (es. "/mio-progetto/")
-    base: '/sek-comix-studio/', 
+    // MODIFICA CRITICA: Usa './' per far funzionare il sito su qualsiasi percorso
+    base: './', 
     define: {
       'process.env.API_KEY': JSON.stringify(process.env.API_KEY || env.API_KEY)
     }
