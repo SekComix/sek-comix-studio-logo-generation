@@ -4,7 +4,7 @@ import { generateBrandIdentity, BrandIdentityResult } from '../services/geminiSe
 import { 
   Download, Check, Sparkles, ArrowRight, Type, Palette as PaletteIcon, Grid, Sun, Moon,
   Palette, Utensils, Camera, Heart, Code, Music, Dumbbell, Briefcase, Plane, Gamepad2, ShoppingCart, Book, Car, Home, Leaf,
-  Maximize, History, Trash2, FileText, Upload, Image as ImageIcon, Plus, X, RotateCcw, PenTool
+  Maximize, History, Trash2, FileText, Upload, Image as ImageIcon, Plus, X, RotateCcw, PenTool, Minus
 } from 'lucide-react';
 
 // Dictionary of Standard Icons
@@ -73,6 +73,7 @@ export const BrandKit: React.FC = () => {
   // NAME EDITING STATE
   const [brandName1, setBrandName1] = useState('SEK');
   const [brandName2, setBrandName2] = useState('COMIX');
+  const [showSeparator, setShowSeparator] = useState(true); // Toggle for "+"
 
   // Custom Icon Library State
   const [userIcons, setUserIcons] = useState<CustomUserIcon[]>([]);
@@ -112,14 +113,15 @@ export const BrandKit: React.FC = () => {
   const handleResetBrandName = () => {
     setBrandName1('SEK');
     setBrandName2('COMIX');
+    setShowSeparator(true);
   };
 
   // --- CUSTOM ICON LOGIC ---
   const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1024 * 1024) { // 1MB limit check
-         alert("L'immagine è troppo grande. Usa un file sotto 1MB.");
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit check (Increased from 1MB)
+         alert("L'immagine è troppo grande. Usa un file sotto 5MB.");
          return;
       }
 
@@ -213,8 +215,16 @@ export const BrandKit: React.FC = () => {
     const spacing = 30;
     const iconSpace = 250; // Space for icon + margins
     
+    // Logic handles if Separator is hidden
+    let middleWidth = 0;
+    if (showSeparator) {
+        middleWidth = spacing + plusWidth + spacing;
+    } else {
+        middleWidth = spacing; // Just one spacing between words
+    }
+
     // Calculate total needed width + padding
-    const totalContentWidth = iconSpace + text1Width + spacing + plusWidth + spacing + text2Width;
+    const totalContentWidth = iconSpace + text1Width + middleWidth + text2Width;
     const baseWidth = Math.max(1200, totalContentWidth + 200); // Minimum 1200 or fit content
     const baseHeight = 500;
     
@@ -281,29 +291,37 @@ export const BrandKit: React.FC = () => {
       ctx.fillStyle = baseFill;
       ctx.fillText(brandName1, startX, centerY);
 
-      // Text: +
-      ctx.font = `300 ${fontBase}`;
-      ctx.fillStyle = accentColor;
-      ctx.shadowBlur = 0;
-      ctx.fillText("+", startX + text1Width + spacing, centerY);
+      // Separator and Text 2 Position
+      let currentX = startX + text1Width;
+
+      if (showSeparator) {
+        // Draw +
+        ctx.font = `300 ${fontBase}`;
+        ctx.fillStyle = accentColor;
+        ctx.shadowBlur = 0;
+        ctx.fillText("+", currentX + spacing, centerY);
+        currentX += spacing + plusWidth + spacing;
+      } else {
+        // Add just spacing
+        currentX += spacing;
+      }
 
       // Text 2: (Brand Name 2)
       ctx.font = `900 ${fontBase}`;
-      const comixX = startX + text1Width + spacing + plusWidth + spacing;
-      const gradient = ctx.createLinearGradient(comixX, 0, comixX + text2Width, 0);
+      const gradient = ctx.createLinearGradient(currentX, 0, currentX + text2Width, 0);
       gradient.addColorStop(0, accentColor);
       gradient.addColorStop(1, '#0575E6'); 
       ctx.fillStyle = gradient;
-      ctx.fillText(brandName2, comixX, centerY);
+      ctx.shadowBlur = 0; // Reset blur for gradient text
+      ctx.fillText(brandName2, currentX, centerY);
 
-      // Subtitle
+      // Subtitle (Align to end of second word)
       if (currentIdentity.subtitle) {
         ctx.font = `bold 40px "Inter", sans-serif`;
         ctx.fillStyle = accentColor;
         ctx.letterSpacing = "10px";
         ctx.textAlign = 'right';
-        // Align subtitle to end of second word
-        ctx.fillText(currentIdentity.subtitle, comixX + text2Width, centerY + 100); 
+        ctx.fillText(currentIdentity.subtitle, currentX + text2Width, centerY + 100); 
       }
       
       triggerDownload();
@@ -445,29 +463,38 @@ export const BrandKit: React.FC = () => {
                    <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                      <PenTool size={14} /> Nome Brand
                    </label>
-                   <div className="flex gap-2 items-center">
-                      <input 
-                        type="text" 
-                        value={brandName1} 
-                        onChange={(e) => setBrandName1(e.target.value.toUpperCase())}
-                        className="w-1/3 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none"
-                        placeholder="SEK"
-                      />
-                      <span className="text-gray-500 font-bold">+</span>
-                      <input 
-                        type="text" 
-                        value={brandName2} 
-                        onChange={(e) => setBrandName2(e.target.value.toUpperCase())}
-                        className="w-1/3 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none"
-                        placeholder="COMIX"
-                      />
-                      <button 
-                         onClick={handleResetBrandName} 
-                         className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                         title="Ripristina originale"
-                      >
-                        <RotateCcw size={16} />
-                      </button>
+                   <div className="flex flex-col gap-2">
+                     <div className="flex gap-2 items-center">
+                        <input 
+                          type="text" 
+                          value={brandName1} 
+                          onChange={(e) => setBrandName1(e.target.value.toUpperCase())}
+                          className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none"
+                          placeholder="SEK"
+                        />
+                        <button 
+                           onClick={() => setShowSeparator(!showSeparator)}
+                           className={`p-2 rounded-lg font-bold text-sm transition-colors ${showSeparator ? 'text-brand-accent bg-brand-accent/10' : 'text-gray-500 bg-white/5'}`}
+                           title={showSeparator ? "Nascondi separatore" : "Mostra separatore"}
+                        >
+                           {showSeparator ? <Plus size={16} /> : <Minus size={16} />}
+                        </button>
+                        <input 
+                          type="text" 
+                          value={brandName2} 
+                          onChange={(e) => setBrandName2(e.target.value.toUpperCase())}
+                          className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none"
+                          placeholder="COMIX"
+                        />
+                     </div>
+                     <div className="flex justify-end">
+                        <button 
+                           onClick={handleResetBrandName} 
+                           className="text-xs text-gray-400 hover:text-white flex items-center gap-1"
+                        >
+                          <RotateCcw size={10} /> Ripristina originale
+                        </button>
+                     </div>
                    </div>
                  </div>
 
@@ -495,7 +522,7 @@ export const BrandKit: React.FC = () => {
                       type="text"
                       value={currentIdentity.subtitle}
                       onChange={(e) => updateIdentity({ subtitle: e.target.value.toUpperCase() })}
-                      maxLength={20}
+                      maxLength={30}
                       className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-brand-accent outline-none font-bold tracking-widest"
                    />
                  </div>
@@ -646,6 +673,7 @@ export const BrandKit: React.FC = () => {
                     theme={logoTheme}
                     text1={brandName1}
                     text2={brandName2}
+                    showSeparator={showSeparator}
                  />
               </div>
             </div>
