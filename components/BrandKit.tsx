@@ -4,7 +4,7 @@ import { generateBrandIdentity, BrandIdentityResult } from '../services/geminiSe
 import { 
   Download, Check, Sparkles, ArrowRight, Type, Palette as PaletteIcon, Grid, Sun, Moon,
   Palette, Utensils, Camera, Heart, Code, Music, Dumbbell, Briefcase, Plane, Gamepad2, ShoppingCart, Book, Car, Home, Leaf,
-  Maximize, History, Trash2, FileText, Upload, Image as ImageIcon, Plus, X
+  Maximize, History, Trash2, FileText, Upload, Image as ImageIcon, Plus, X, RotateCcw, PenTool
 } from 'lucide-react';
 
 // Dictionary of Standard Icons
@@ -70,6 +70,10 @@ export const BrandKit: React.FC = () => {
   const [customFilename, setCustomFilename] = useState('');
   const [logoTheme, setLogoTheme] = useState<'dark' | 'light'>('dark');
 
+  // NAME EDITING STATE
+  const [brandName1, setBrandName1] = useState('SEK');
+  const [brandName2, setBrandName2] = useState('COMIX');
+
   // Custom Icon Library State
   const [userIcons, setUserIcons] = useState<CustomUserIcon[]>([]);
   const [selectedCustomIconId, setSelectedCustomIconId] = useState<string | null>(null);
@@ -103,6 +107,11 @@ export const BrandKit: React.FC = () => {
   const clearPresets = () => {
     setSavedPresets(DEFAULT_PRESETS);
     localStorage.setItem('sek_brand_presets', JSON.stringify(DEFAULT_PRESETS));
+  };
+
+  const handleResetBrandName = () => {
+    setBrandName1('SEK');
+    setBrandName2('COMIX');
   };
 
   // --- CUSTOM ICON LOGIC ---
@@ -196,8 +205,19 @@ export const BrandKit: React.FC = () => {
       case 'xl': scaleFactor = 4; break;
     }
 
-    const baseWidth = 1200;
+    // Dynamic Width Calculation based on text length
+    ctx.font = `900 120px "Orbitron", sans-serif`; 
+    const text1Width = ctx.measureText(brandName1).width;
+    const plusWidth = ctx.measureText("+").width;
+    const text2Width = ctx.measureText(brandName2).width;
+    const spacing = 30;
+    const iconSpace = 250; // Space for icon + margins
+    
+    // Calculate total needed width + padding
+    const totalContentWidth = iconSpace + text1Width + spacing + plusWidth + spacing + text2Width;
+    const baseWidth = Math.max(1200, totalContentWidth + 200); // Minimum 1200 or fit content
     const baseHeight = 500;
+    
     canvas.width = baseWidth * scaleFactor;
     canvas.height = baseHeight * scaleFactor; 
     ctx.scale(scaleFactor, scaleFactor);
@@ -207,12 +227,17 @@ export const BrandKit: React.FC = () => {
     const fontSize = 120;
     const fontBase = `${fontSize}px "Orbitron", sans-serif`;
     const baseFill = logoTheme === 'dark' ? '#ffffff' : '#0f0c29';
-    const startX = 350; 
+    
+    // Centering Logic
+    const startX = (baseWidth - totalContentWidth) / 2 + 100; // Start drawing text after icon area
     const centerY = 220;
     const accentColor = currentIdentity.colorHex;
 
     // Helper to finish drawing after image/icon is ready
     const finishDrawing = (imageObj: HTMLImageElement | null) => {
+      // Icon Position (Relative to Text Start)
+      const iconCenterX = startX - 120;
+
       // Glow
       ctx.save();
       ctx.shadowColor = accentColor;
@@ -220,7 +245,7 @@ export const BrandKit: React.FC = () => {
       ctx.fillStyle = accentColor;
       ctx.globalAlpha = 0.3;
       ctx.beginPath();
-      ctx.arc(startX - 120, centerY, 70, 0, Math.PI * 2);
+      ctx.arc(iconCenterX, centerY, 70, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
@@ -232,14 +257,10 @@ export const BrandKit: React.FC = () => {
         if (logoTheme === 'dark') {
             ctx.filter = 'drop-shadow(0 0 2px rgba(255,255,255,0.2))';
         }
-        // Aspect ratio handling could be added, here assuming square-ish fits
-        // Maintain aspect ratio logic could be complex, keeping simple square fit for now
-        // Draw centered in the icon slot
-        const imgX = startX - 170;
+        
+        const imgX = iconCenterX - 50;
         const imgY = centerY - 50;
         
-        // If it's a custom image, we use drawImage with containment logic if needed
-        // For now stretch to fit box (object-contain behavior requires aspect calc)
         // Simple Aspect Fit:
         const scale = Math.min(size / imageObj.width, size / imageObj.height);
         const w = imageObj.width * scale;
@@ -251,33 +272,29 @@ export const BrandKit: React.FC = () => {
         ctx.filter = 'none'; // reset
       }
 
-      // Text: SEK
+      // Text 1: (Brand Name 1)
       ctx.font = `900 ${fontBase}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.shadowColor = logoTheme === 'dark' ? accentColor : 'transparent';
       ctx.shadowBlur = logoTheme === 'dark' ? 20 : 0;
       ctx.fillStyle = baseFill;
-      ctx.fillText("SEK", startX, centerY);
-
-      const sekWidth = ctx.measureText("SEK").width;
-      const spacing = 30;
+      ctx.fillText(brandName1, startX, centerY);
 
       // Text: +
       ctx.font = `300 ${fontBase}`;
       ctx.fillStyle = accentColor;
       ctx.shadowBlur = 0;
-      ctx.fillText("+", startX + sekWidth + spacing, centerY);
-      const plusWidth = ctx.measureText("+").width;
+      ctx.fillText("+", startX + text1Width + spacing, centerY);
 
-      // Text: COMIX
+      // Text 2: (Brand Name 2)
       ctx.font = `900 ${fontBase}`;
-      const comixX = startX + sekWidth + spacing + plusWidth + spacing;
-      const gradient = ctx.createLinearGradient(comixX, 0, comixX + 500, 0);
+      const comixX = startX + text1Width + spacing + plusWidth + spacing;
+      const gradient = ctx.createLinearGradient(comixX, 0, comixX + text2Width, 0);
       gradient.addColorStop(0, accentColor);
       gradient.addColorStop(1, '#0575E6'); 
       ctx.fillStyle = gradient;
-      ctx.fillText("COMIX", comixX, centerY);
+      ctx.fillText(brandName2, comixX, centerY);
 
       // Subtitle
       if (currentIdentity.subtitle) {
@@ -285,7 +302,8 @@ export const BrandKit: React.FC = () => {
         ctx.fillStyle = accentColor;
         ctx.letterSpacing = "10px";
         ctx.textAlign = 'right';
-        ctx.fillText(currentIdentity.subtitle, comixX + 450, centerY + 100); 
+        // Align subtitle to end of second word
+        ctx.fillText(currentIdentity.subtitle, comixX + text2Width, centerY + 100); 
       }
       
       triggerDownload();
@@ -297,7 +315,7 @@ export const BrandKit: React.FC = () => {
       const cleanSubtitle = currentIdentity.subtitle.replace(/[^a-zA-Z0-9]/g, '');
       const finalName = customFilename.trim() 
         ? `${customFilename.trim()}.png`
-        : `SekComix-${cleanSubtitle}-${filenameTheme}-${downloadSize}.png`;
+        : `Logo-${brandName1}${brandName2}-${cleanSubtitle}-${filenameTheme}-${downloadSize}.png`;
         
       link.download = finalName;
       link.href = canvas.toDataURL('image/png');
@@ -422,6 +440,37 @@ export const BrandKit: React.FC = () => {
             {/* MANUAL CONTROLS */}
             <div className="space-y-5 animate-fade-in bg-white/5 p-5 rounded-2xl border border-white/10 mt-4">
                  
+                 {/* Name Editing Section */}
+                 <div>
+                   <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                     <PenTool size={14} /> Nome Brand
+                   </label>
+                   <div className="flex gap-2 items-center">
+                      <input 
+                        type="text" 
+                        value={brandName1} 
+                        onChange={(e) => setBrandName1(e.target.value.toUpperCase())}
+                        className="w-1/3 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none"
+                        placeholder="SEK"
+                      />
+                      <span className="text-gray-500 font-bold">+</span>
+                      <input 
+                        type="text" 
+                        value={brandName2} 
+                        onChange={(e) => setBrandName2(e.target.value.toUpperCase())}
+                        className="w-1/3 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none"
+                        placeholder="COMIX"
+                      />
+                      <button 
+                         onClick={handleResetBrandName} 
+                         className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                         title="Ripristina originale"
+                      >
+                        <RotateCcw size={16} />
+                      </button>
+                   </div>
+                 </div>
+
                  {/* Theme Toggle */}
                  <div>
                     <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
@@ -595,6 +644,8 @@ export const BrandKit: React.FC = () => {
                     customColor={currentIdentity.colorHex}
                     subtitle={currentIdentity.subtitle}
                     theme={logoTheme}
+                    text1={brandName1}
+                    text2={brandName2}
                  />
               </div>
             </div>
@@ -641,7 +692,7 @@ export const BrandKit: React.FC = () => {
                       type="text" 
                       value={customFilename}
                       onChange={(e) => setCustomFilename(e.target.value)}
-                      placeholder={`Es. SekComix-${currentIdentity.subtitle}`}
+                      placeholder={`Es. ${brandName1}${brandName2}-${currentIdentity.subtitle}`}
                       className="bg-transparent w-full px-3 py-2 text-sm text-white outline-none placeholder-gray-600"
                     />
                     <div className="px-3 py-2 text-xs text-gray-500 font-mono bg-white/5 border-l border-white/5">.png</div>
