@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrandLogo } from './BrandLogo';
 import { generateBrandIdentity, BrandIdentityResult } from '../services/geminiService';
 import { 
-  Download, Check, Sparkles, ArrowRight, SlidersHorizontal, Type, Palette as PaletteIcon, Grid, Sun, Moon,
+  Download, Check, Sparkles, ArrowRight, Type, Palette as PaletteIcon, Grid, Sun, Moon,
   Palette, Utensils, Camera, Heart, Code, Music, Dumbbell, Briefcase, Plane, Gamepad2, ShoppingCart, Book, Car, Home, Leaf,
-  Maximize, Save, History, Trash2, FileText
+  Maximize, History, Trash2, FileText, Upload, Image as ImageIcon, Plus, X
 } from 'lucide-react';
 
-// Dictionary of Icons
+// Dictionary of Standard Icons
 const ICON_MAP: Record<string, { component: React.ReactNode, path: string, label: string }> = {
   'palette': { 
     component: <Palette size={40} strokeWidth={2.5} />, 
@@ -40,7 +40,6 @@ const BRAND_COLORS = [
   '#ffff00', // Yellow
 ];
 
-// Preview Background Options
 const BG_OPTIONS = [
   { color: '#0f0c29', label: 'Dark' },
   { color: '#000000', label: 'Black' },
@@ -52,6 +51,13 @@ const DEFAULT_PRESETS = ['Viaggi', 'Cucina', 'Gaming', 'Musica', 'Tech', 'Matrim
 
 type DownloadSize = 'sm' | 'md' | 'lg' | 'xl';
 
+// Interface for User Uploaded Icons
+interface CustomUserIcon {
+  id: string;
+  name: string;
+  data: string; // Base64
+}
+
 export const BrandKit: React.FC = () => {
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'generating' | 'done'>('idle');
   const [appDescription, setAppDescription] = useState('');
@@ -59,36 +65,36 @@ export const BrandKit: React.FC = () => {
   const [showManualControls, setShowManualControls] = useState(false);
   const [previewBg, setPreviewBg] = useState('#0f0c29');
   
-  // New States for requested features
   const [savedPresets, setSavedPresets] = useState<string[]>([]);
   const [downloadSize, setDownloadSize] = useState<DownloadSize>('md');
   const [customFilename, setCustomFilename] = useState('');
-  
-  // Theme State: 'dark' means LOGO is optimized for DARK background (so text is WHITE)
-  // 'light' means LOGO is optimized for LIGHT background (so text is DARK)
   const [logoTheme, setLogoTheme] = useState<'dark' | 'light'>('dark');
-  
-  // Brand State
+
+  // Custom Icon Library State
+  const [userIcons, setUserIcons] = useState<CustomUserIcon[]>([]);
+  const [selectedCustomIconId, setSelectedCustomIconId] = useState<string | null>(null);
+  const [iconTab, setIconTab] = useState<'standard' | 'custom'>('standard');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [currentIdentity, setCurrentIdentity] = useState<BrandIdentityResult>({
     iconKey: 'palette',
     colorHex: '#00f260',
     subtitle: 'CREATOR STUDIO'
   });
 
-  // Load presets from local storage on mount
+  // Load presets and custom icons from storage
   useEffect(() => {
-    const stored = localStorage.getItem('sek_brand_presets');
-    if (stored) {
-      setSavedPresets(JSON.parse(stored));
-    } else {
-      setSavedPresets(DEFAULT_PRESETS);
-    }
+    const storedPresets = localStorage.getItem('sek_brand_presets');
+    if (storedPresets) setSavedPresets(JSON.parse(storedPresets));
+    else setSavedPresets(DEFAULT_PRESETS);
+
+    const storedIcons = localStorage.getItem('sek_brand_custom_icons');
+    if (storedIcons) setUserIcons(JSON.parse(storedIcons));
   }, []);
 
   const savePreset = (category: string) => {
     const trimmed = category.trim();
     if (!trimmed || savedPresets.some(p => p.toLowerCase() === trimmed.toLowerCase())) return;
-    
     const newPresets = [trimmed, ...savedPresets];
     setSavedPresets(newPresets);
     localStorage.setItem('sek_brand_presets', JSON.stringify(newPresets));
@@ -99,20 +105,63 @@ export const BrandKit: React.FC = () => {
     localStorage.setItem('sek_brand_presets', JSON.stringify(DEFAULT_PRESETS));
   };
 
+  // --- CUSTOM ICON LOGIC ---
+  const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) { // 1MB limit check
+         alert("L'immagine è troppo grande. Usa un file sotto 1MB.");
+         return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        // Prompt for name
+        const name = prompt("Dai un nome a questa icona:", file.name.split('.')[0]) || "Icona";
+        
+        const newIcon: CustomUserIcon = {
+          id: Date.now().toString(),
+          name: name.substring(0, 15),
+          data: base64
+        };
+
+        const updatedList = [newIcon, ...userIcons];
+        setUserIcons(updatedList);
+        localStorage.setItem('sek_brand_custom_icons', JSON.stringify(updatedList));
+        
+        // Auto-select uploaded icon
+        setSelectedCustomIconId(newIcon.id);
+        setIconTab('custom');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const deleteCustomIcon = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("Vuoi davvero cancellare questa icona?")) {
+      const updated = userIcons.filter(icon => icon.id !== id);
+      setUserIcons(updated);
+      localStorage.setItem('sek_brand_custom_icons', JSON.stringify(updated));
+      if (selectedCustomIconId === id) setSelectedCustomIconId(null);
+    }
+  };
+
   const handleGenerateIdentity = async (overrideInput?: string) => {
     const inputToUse = overrideInput || appDescription;
     if (!inputToUse.trim()) return;
-    
-    // Set input if using preset
     if (overrideInput) setAppDescription(overrideInput);
 
     setIsAiLoading(true);
-    setShowManualControls(false); // Reset to view preview first
+    setShowManualControls(false); 
+    // Reset custom icon selection when generating new standard ID
+    setSelectedCustomIconId(null); 
+    setIconTab('standard');
+
     try {
       const result = await generateBrandIdentity(inputToUse);
       setCurrentIdentity(result);
-      
-      // Auto-save successful search to history
       savePreset(inputToUse);
     } catch (e) {
       console.error(e);
@@ -127,13 +176,10 @@ export const BrandKit: React.FC = () => {
 
   const toggleTheme = (theme: 'dark' | 'light') => {
     setLogoTheme(theme);
-    if (theme === 'light') {
-      setPreviewBg('#ffffff');
-    } else {
-      setPreviewBg('#0f0c29');
-    }
+    setPreviewBg(theme === 'light' ? '#ffffff' : '#0f0c29');
   };
 
+  // --- DOWNLOAD LOGIC (UPDATED FOR IMAGES) ---
   const downloadLogo = async () => {
     setDownloadStatus('generating');
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -142,50 +188,32 @@ export const BrandKit: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Configurazione Dimensioni (Scaling Logic)
     let scaleFactor = 1;
     switch(downloadSize) {
-      case 'sm': scaleFactor = 0.5; break; // 600px width
-      case 'md': scaleFactor = 1; break;   // 1200px width
-      case 'lg': scaleFactor = 2; break;   // 2400px width
-      case 'xl': scaleFactor = 4; break;   // 4800px width
+      case 'sm': scaleFactor = 0.5; break;
+      case 'md': scaleFactor = 1; break;
+      case 'lg': scaleFactor = 2; break;
+      case 'xl': scaleFactor = 4; break;
     }
 
     const baseWidth = 1200;
     const baseHeight = 500;
-    
     canvas.width = baseWidth * scaleFactor;
     canvas.height = baseHeight * scaleFactor; 
-
-    // Scale context
     ctx.scale(scaleFactor, scaleFactor);
 
-    // 1. Pulisci sfondo (Trasparente)
     ctx.clearRect(0, 0, baseWidth, baseHeight);
 
-    // 2. Setup Font & Colors
     const fontSize = 120;
     const fontBase = `${fontSize}px "Orbitron", sans-serif`;
-    
-    // Determine Base Color (White or Dark Blue)
     const baseFill = logoTheme === 'dark' ? '#ffffff' : '#0f0c29';
-    
-    // Posizionamento
     const startX = 350; 
     const centerY = 220;
     const accentColor = currentIdentity.colorHex;
 
-    const iconSvgString = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="${baseFill}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        ${ICON_MAP[currentIdentity.iconKey]?.path || ICON_MAP['palette'].path}
-      </svg>
-    `;
-    const img = new Image();
-    const svgBlob = new Blob([iconSvgString], {type: 'image/svg+xml;charset=utf-8'});
-    const url = URL.createObjectURL(svgBlob);
-    
-    img.onload = () => {
-      // Draw Glow
+    // Helper to finish drawing after image/icon is ready
+    const finishDrawing = (imageObj: HTMLImageElement | null) => {
+      // Glow
       ctx.save();
       ctx.shadowColor = accentColor;
       ctx.shadowBlur = 60;
@@ -196,11 +224,34 @@ export const BrandKit: React.FC = () => {
       ctx.fill();
       ctx.restore();
 
-      // Draw Icon
-      ctx.drawImage(img, startX - 170, centerY - 50, 100, 100);
+      // Draw Image or SVG
+      if (imageObj) {
+        // Draw Image (Custom or SVG converted)
+        const size = 100;
+        // If theme is dark, image might need drop shadow if transparent PNG
+        if (logoTheme === 'dark') {
+            ctx.filter = 'drop-shadow(0 0 2px rgba(255,255,255,0.2))';
+        }
+        // Aspect ratio handling could be added, here assuming square-ish fits
+        // Maintain aspect ratio logic could be complex, keeping simple square fit for now
+        // Draw centered in the icon slot
+        const imgX = startX - 170;
+        const imgY = centerY - 50;
+        
+        // If it's a custom image, we use drawImage with containment logic if needed
+        // For now stretch to fit box (object-contain behavior requires aspect calc)
+        // Simple Aspect Fit:
+        const scale = Math.min(size / imageObj.width, size / imageObj.height);
+        const w = imageObj.width * scale;
+        const h = imageObj.height * scale;
+        const offsetX = (size - w) / 2;
+        const offsetY = (size - h) / 2;
 
-      // --- TEXT RENDERING ---
-      // SEK
+        ctx.drawImage(imageObj, imgX + offsetX, imgY + offsetY, w, h);
+        ctx.filter = 'none'; // reset
+      }
+
+      // Text: SEK
       ctx.font = `900 ${fontBase}`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
@@ -212,14 +263,14 @@ export const BrandKit: React.FC = () => {
       const sekWidth = ctx.measureText("SEK").width;
       const spacing = 30;
 
-      // +
+      // Text: +
       ctx.font = `300 ${fontBase}`;
       ctx.fillStyle = accentColor;
-      ctx.shadowBlur = 0; // Reset shadow
+      ctx.shadowBlur = 0;
       ctx.fillText("+", startX + sekWidth + spacing, centerY);
       const plusWidth = ctx.measureText("+").width;
 
-      // COMIX
+      // Text: COMIX
       ctx.font = `900 ${fontBase}`;
       const comixX = startX + sekWidth + spacing + plusWidth + spacing;
       const gradient = ctx.createLinearGradient(comixX, 0, comixX + 500, 0);
@@ -228,7 +279,7 @@ export const BrandKit: React.FC = () => {
       ctx.fillStyle = gradient;
       ctx.fillText("COMIX", comixX, centerY);
 
-      // SUBTITLE (Dynamic)
+      // Subtitle
       if (currentIdentity.subtitle) {
         ctx.font = `bold 40px "Inter", sans-serif`;
         ctx.fillStyle = accentColor;
@@ -236,13 +287,13 @@ export const BrandKit: React.FC = () => {
         ctx.textAlign = 'right';
         ctx.fillText(currentIdentity.subtitle, comixX + 450, centerY + 100); 
       }
-
-      URL.revokeObjectURL(url);
       
-      // Trigger Download
+      triggerDownload();
+    };
+
+    const triggerDownload = () => {
       const link = document.createElement('a');
       const filenameTheme = logoTheme === 'dark' ? 'DarkMode' : 'LightMode';
-      // Use Custom Filename if provided, else auto-generate
       const cleanSubtitle = currentIdentity.subtitle.replace(/[^a-zA-Z0-9]/g, '');
       const finalName = customFilename.trim() 
         ? `${customFilename.trim()}.png`
@@ -254,19 +305,49 @@ export const BrandKit: React.FC = () => {
       setDownloadStatus('done');
       setTimeout(() => setDownloadStatus('idle'), 3000);
     };
-    img.src = url;
+
+    // LOAD IMAGE SOURCE
+    const activeCustomImgData = selectedCustomIconId 
+       ? userIcons.find(i => i.id === selectedCustomIconId)?.data 
+       : null;
+
+    if (activeCustomImgData) {
+        // Load User Custom Image
+        const img = new Image();
+        img.onload = () => finishDrawing(img);
+        img.src = activeCustomImgData;
+    } else {
+        // Load Standard SVG
+        const iconSvgString = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="${baseFill}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            ${ICON_MAP[currentIdentity.iconKey]?.path || ICON_MAP['palette'].path}
+        </svg>
+        `;
+        const img = new Image();
+        const svgBlob = new Blob([iconSvgString], {type: 'image/svg+xml;charset=utf-8'});
+        const url = URL.createObjectURL(svgBlob);
+        img.onload = () => {
+            finishDrawing(img);
+            URL.revokeObjectURL(url);
+        };
+        img.src = url;
+    }
   };
+
+  // Get active custom image data for preview
+  const activeCustomImageSrc = selectedCustomIconId 
+      ? userIcons.find(i => i.id === selectedCustomIconId)?.data 
+      : null;
 
   return (
     <div className="w-full max-w-5xl mx-auto mt-24 mb-20 px-4">
       
       <div className="bg-[#1a1638] border border-brand-accent/30 rounded-3xl p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden">
-        {/* Background Gradients */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-brand-accent/10 rounded-full blur-[100px] pointer-events-none"></div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 relative z-10">
           
-          {/* LEFT: Generator Controls & Manual Edits */}
+          {/* LEFT: Controls */}
           <div className="space-y-6">
             <div>
               <h2 className="text-3xl font-brand font-bold text-white mb-2 uppercase flex items-center gap-3">
@@ -278,17 +359,13 @@ export const BrandKit: React.FC = () => {
               </p>
             </div>
 
-            {/* Quick Choices / Presets */}
+            {/* Quick Choices */}
             <div className="bg-black/20 p-4 rounded-xl border border-white/5">
               <div className="flex justify-between items-center mb-3">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                  <History size={14} /> Categorie Rapide (Memoria)
+                  <History size={14} /> Categorie Rapide
                 </label>
-                <button 
-                  onClick={clearPresets} 
-                  className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1"
-                  title="Cancella cronologia"
-                >
+                <button onClick={clearPresets} className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1">
                   <Trash2 size={10} /> Reset
                 </button>
               </div>
@@ -305,10 +382,10 @@ export const BrandKit: React.FC = () => {
               </div>
             </div>
 
-            {/* AI Generator Input */}
+            {/* AI Generator */}
             <div className="bg-black/40 p-6 rounded-2xl border border-white/10 space-y-4">
               <label className="block text-sm font-medium text-gray-300">
-                Nuova Categoria (si salverà automaticamente)
+                Nuova Categoria
               </label>
               <div className="flex gap-2">
                 <input 
@@ -338,44 +415,29 @@ export const BrandKit: React.FC = () => {
                     : 'bg-brand-accent text-[#0f0c29] hover:bg-white hover:shadow-[0_0_20px_rgba(0,242,96,0.4)]'}
                 `}
               >
-                {isAiLoading ? (
-                  <>Analisi in corso...</>
-                ) : (
-                  <>
-                    <Sparkles size={18} />
-                    Genera Identità
-                  </>
-                )}
+                {isAiLoading ? 'Analisi in corso...' : <><Sparkles size={18} /> Genera Identità</>}
               </button>
             </div>
             
             {/* MANUAL CONTROLS */}
             <div className="space-y-5 animate-fade-in bg-white/5 p-5 rounded-2xl border border-white/10 mt-4">
                  
-                 {/* Logo Version Toggle (Light/Dark) */}
+                 {/* Theme Toggle */}
                  <div>
                     <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                        <Sun size={14} /> Versione Logo (Contrasto)
                     </label>
                     <div className="flex bg-black/40 p-1 rounded-xl border border-white/10">
-                      <button
-                        onClick={() => toggleTheme('dark')}
-                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${logoTheme === 'dark' ? 'bg-[#0f0c29] text-white shadow-lg border border-brand-accent/30' : 'text-gray-400 hover:text-white'}`}
-                      >
-                         <Moon size={14} />
-                         Per Sfondi Scuri
+                      <button onClick={() => toggleTheme('dark')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${logoTheme === 'dark' ? 'bg-[#0f0c29] text-white shadow-lg border border-brand-accent/30' : 'text-gray-400 hover:text-white'}`}>
+                         <Moon size={14} /> Scuri
                       </button>
-                      <button
-                        onClick={() => toggleTheme('light')}
-                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${logoTheme === 'light' ? 'bg-gray-200 text-[#0f0c29] shadow-lg' : 'text-gray-400 hover:text-white'}`}
-                      >
-                         <Sun size={14} />
-                         Per Sfondi Chiari
+                      <button onClick={() => toggleTheme('light')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${logoTheme === 'light' ? 'bg-gray-200 text-[#0f0c29] shadow-lg' : 'text-gray-400 hover:text-white'}`}>
+                         <Sun size={14} /> Chiari
                       </button>
                     </div>
                  </div>
 
-                 {/* Subtitle Edit */}
+                 {/* Subtitle */}
                  <div>
                    <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                      <Type size={14} /> Sottotitolo
@@ -389,7 +451,7 @@ export const BrandKit: React.FC = () => {
                    />
                  </div>
 
-                 {/* Color Picker */}
+                 {/* Color */}
                  <div>
                    <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                      <PaletteIcon size={14} /> Colore Tema
@@ -414,37 +476,101 @@ export const BrandKit: React.FC = () => {
                    </div>
                  </div>
 
-                 {/* Icon Grid */}
+                 {/* ICON SELECTION - UPDATED WITH TABS */}
                  <div>
-                   <button 
-                      onClick={() => setShowManualControls(!showManualControls)}
-                      className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 hover:text-white"
-                   >
-                     <Grid size={14} /> Seleziona Icona {showManualControls ? '(Chiudi)' : '(Apri)'}
-                   </button>
+                   <div className="flex justify-between items-center mb-2">
+                     <button 
+                        onClick={() => setShowManualControls(!showManualControls)}
+                        className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider hover:text-white"
+                     >
+                       <Grid size={14} /> Modifica Icona {showManualControls ? '(Chiudi)' : '(Apri)'}
+                     </button>
+                   </div>
                    
                    {showManualControls && (
-                     <div className="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar animate-fade-in">
-                        {Object.keys(ICON_MAP).map(iconKey => {
-                          const IconComp = ICON_MAP[iconKey].component;
-                          const SmallIcon = React.cloneElement(IconComp as React.ReactElement<{ size: number }>, { size: 18 });
-                          
-                          return (
-                            <button
-                              key={iconKey}
-                              onClick={() => updateIdentity({ iconKey })}
-                              title={ICON_MAP[iconKey].label}
-                              className={`
-                                aspect-square rounded-lg flex items-center justify-center transition-all
-                                ${currentIdentity.iconKey === iconKey 
-                                  ? 'bg-brand-accent text-black shadow-lg shadow-brand-accent/30' 
-                                  : 'bg-black/40 text-gray-400 hover:bg-white/10 hover:text-white'}
-                              `}
-                            >
-                              {SmallIcon}
-                            </button>
-                          );
-                        })}
+                     <div className="bg-black/20 rounded-xl p-3 animate-fade-in border border-white/5">
+                        
+                        {/* Tabs */}
+                        <div className="flex gap-2 mb-3 border-b border-white/10 pb-2">
+                          <button 
+                            onClick={() => setIconTab('standard')}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${iconTab === 'standard' ? 'bg-brand-accent text-black' : 'text-gray-400 hover:text-white'}`}
+                          >
+                            Standard
+                          </button>
+                          <button 
+                            onClick={() => setIconTab('custom')}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${iconTab === 'custom' ? 'bg-brand-accent text-black' : 'text-gray-400 hover:text-white'}`}
+                          >
+                            Le Mie Icone
+                          </button>
+                        </div>
+
+                        {/* Standard Icons */}
+                        {iconTab === 'standard' && (
+                          <div className="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                              {Object.keys(ICON_MAP).map(iconKey => {
+                                const IconComp = ICON_MAP[iconKey].component;
+                                const SmallIcon = React.cloneElement(IconComp as React.ReactElement<{ size: number }>, { size: 18 });
+                                return (
+                                  <button
+                                    key={iconKey}
+                                    onClick={() => { updateIdentity({ iconKey }); setSelectedCustomIconId(null); }}
+                                    title={ICON_MAP[iconKey].label}
+                                    className={`aspect-square rounded-lg flex items-center justify-center transition-all ${currentIdentity.iconKey === iconKey && !selectedCustomIconId ? 'bg-brand-accent text-black' : 'bg-black/40 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+                                  >
+                                    {SmallIcon}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        )}
+
+                        {/* Custom Icons (My Images) */}
+                        {iconTab === 'custom' && (
+                          <div className="space-y-3">
+                             <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                {/* Upload Button */}
+                                <button
+                                  onClick={() => fileInputRef.current?.click()}
+                                  className="aspect-square rounded-lg border border-dashed border-white/20 flex flex-col items-center justify-center text-gray-500 hover:text-brand-accent hover:border-brand-accent hover:bg-white/5 transition-all gap-1 group"
+                                  title="Carica Nuova"
+                                >
+                                  <Plus size={16} />
+                                  <span className="text-[9px] uppercase font-bold">Add</span>
+                                </button>
+                                <input type="file" ref={fileInputRef} onChange={handleIconUpload} accept="image/png, image/jpeg, image/webp" className="hidden" />
+
+                                {/* User Images */}
+                                {userIcons.map(icon => (
+                                  <div key={icon.id} className="relative group/item">
+                                    <button
+                                      onClick={() => setSelectedCustomIconId(icon.id)}
+                                      className={`w-full aspect-square rounded-lg flex items-center justify-center overflow-hidden border transition-all ${selectedCustomIconId === icon.id ? 'border-brand-accent bg-brand-accent/20' : 'border-transparent bg-black/40'}`}
+                                      title={icon.name}
+                                    >
+                                      <img src={icon.data} alt={icon.name} className="w-8 h-8 object-contain" />
+                                    </button>
+                                    {/* Delete Button */}
+                                    <button 
+                                      onClick={(e) => deleteCustomIcon(icon.id, e)}
+                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity hover:scale-110"
+                                    >
+                                      <X size={10} />
+                                    </button>
+                                    <span className="absolute bottom-0 left-0 right-0 text-[8px] text-center bg-black/60 text-white truncate px-1 opacity-0 group-hover/item:opacity-100 pointer-events-none">
+                                      {icon.name}
+                                    </span>
+                                  </div>
+                                ))}
+                             </div>
+                             {userIcons.length === 0 && (
+                               <p className="text-xs text-gray-500 text-center py-2">
+                                 Nessuna icona salvata. Carica la tua prima immagine!
+                               </p>
+                             )}
+                          </div>
+                        )}
                      </div>
                    )}
                  </div>
@@ -455,7 +581,7 @@ export const BrandKit: React.FC = () => {
           {/* RIGHT: Preview & Download */}
           <div className="flex flex-col items-center justify-center space-y-6">
             
-            {/* Live Preview Container with Dynamic Background */}
+            {/* Preview */}
             <div 
               className="w-full aspect-[2/1] border-2 border-dashed border-white/10 rounded-2xl flex items-center justify-center p-8 relative group transition-colors duration-300"
               style={{ backgroundColor: previewBg }}
@@ -463,14 +589,13 @@ export const BrandKit: React.FC = () => {
               <div className="transform scale-75 md:scale-100 transition-all duration-500">
                  <BrandLogo 
                     size="lg" 
-                    customIcon={ICON_MAP[currentIdentity.iconKey]?.component}
+                    // Logic: Pass standard component OR custom image
+                    customIcon={!selectedCustomIconId ? ICON_MAP[currentIdentity.iconKey]?.component : undefined}
+                    customImageSrc={activeCustomImageSrc}
                     customColor={currentIdentity.colorHex}
                     subtitle={currentIdentity.subtitle}
                     theme={logoTheme}
                  />
-              </div>
-              <div className="absolute top-4 right-4 text-xs font-mono text-gray-500 bg-black/20 px-2 rounded">
-                Preview
               </div>
             </div>
 
@@ -488,29 +613,18 @@ export const BrandKit: React.FC = () => {
               ))}
             </div>
 
-            {/* Export Options & Download */}
+            {/* Export */}
             <div className="w-full bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
-               
-               {/* Size Selector */}
                <div>
                  <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                    <Maximize size={14} /> Dimensione Export
                  </label>
                  <div className="grid grid-cols-4 gap-2">
-                   {[
-                     { id: 'sm', label: 'Piccolo' },
-                     { id: 'md', label: 'Normale' },
-                     { id: 'lg', label: 'Grande' },
-                     { id: 'xl', label: 'Extra' }
-                   ].map((s) => (
+                   {[{ id: 'sm', label: 'Piccolo' }, { id: 'md', label: 'Normale' }, { id: 'lg', label: 'Grande' }, { id: 'xl', label: 'Extra' }].map((s) => (
                      <button
                        key={s.id}
                        onClick={() => setDownloadSize(s.id as DownloadSize)}
-                       className={`py-2 text-xs font-bold rounded-lg transition-all ${
-                         downloadSize === s.id 
-                           ? 'bg-brand-accent text-black' 
-                           : 'bg-black/30 text-gray-400 hover:text-white'
-                       }`}
+                       className={`py-2 text-xs font-bold rounded-lg transition-all ${downloadSize === s.id ? 'bg-brand-accent text-black' : 'bg-black/30 text-gray-400 hover:text-white'}`}
                      >
                        {s.label}
                      </button>
@@ -518,7 +632,6 @@ export const BrandKit: React.FC = () => {
                  </div>
                </div>
 
-               {/* Custom Filename */}
                <div>
                  <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                    <FileText size={14} /> Nome File (Opzionale)
@@ -531,42 +644,24 @@ export const BrandKit: React.FC = () => {
                       placeholder={`Es. SekComix-${currentIdentity.subtitle}`}
                       className="bg-transparent w-full px-3 py-2 text-sm text-white outline-none placeholder-gray-600"
                     />
-                    <div className="px-3 py-2 text-xs text-gray-500 font-mono bg-white/5 border-l border-white/5">
-                      .png
-                    </div>
+                    <div className="px-3 py-2 text-xs text-gray-500 font-mono bg-white/5 border-l border-white/5">.png</div>
                  </div>
                </div>
 
-               {/* Download Button */}
                <button 
                  onClick={downloadLogo}
                  disabled={downloadStatus === 'generating'}
                  className={`
                    w-full py-3 rounded-xl font-brand font-bold text-lg tracking-wider
                    flex items-center justify-center gap-3 transition-all shadow-lg
-                   ${downloadStatus === 'done' 
-                     ? 'bg-green-500 text-black' 
-                     : 'bg-gradient-to-r from-[#302b63] to-[#24243e] hover:from-brand-accent hover:to-brand-accent2 hover:text-white border border-white/10'}
+                   ${downloadStatus === 'done' ? 'bg-green-500 text-black' : 'bg-gradient-to-r from-[#302b63] to-[#24243e] hover:from-brand-accent hover:to-brand-accent2 hover:text-white border border-white/10'}
                  `}
                >
-                 {downloadStatus === 'generating' ? (
-                   <>Preparazione file...</>
-                 ) : downloadStatus === 'done' ? (
-                   <>
-                     <Check size={24} />
-                     SCARICATO!
-                   </>
-                 ) : (
-                   <>
-                     <Download size={24} />
-                     SCARICA
-                   </>
-                 )}
+                 {downloadStatus === 'generating' ? 'Preparazione file...' : downloadStatus === 'done' ? <><Check size={24} /> SCARICATO!</> : <><Download size={24} /> SCARICA</>}
                </button>
             </div>
 
           </div>
-
         </div>
       </div>
     </div>
