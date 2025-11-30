@@ -7,10 +7,13 @@ interface BrandLogoProps {
   showIcon?: boolean;
   // New props for dynamic branding
   customIcon?: React.ReactNode;
-  customImageSrc?: string | null; // NEW: Supporto per immagini utente
+  customImageSrc?: string | null;
   customColor?: string;
   subtitle?: string;
   theme?: 'dark' | 'light';
+  // Props for changing text
+  text1?: string;
+  text2?: string;
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({ 
@@ -21,7 +24,9 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   customImageSrc,
   customColor = '#00f260', // Default neon green
   subtitle,
-  theme = 'dark'
+  theme = 'dark',
+  text1 = 'SEK',
+  text2 = 'COMIX'
 }) => {
   const sizeConfig = {
     sm: { text: 'text-lg', icon: 18, space: 'gap-2', sub: 'text-[0.6rem]', imgSize: 'w-5 h-5' },
@@ -63,11 +68,11 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
           </div>
         )}
         <div className={`${config.text} flex items-center`}>
-          <span className="drop-shadow-lg transition-colors duration-300" style={{ color: baseTextColor }}>SEK</span>
+          <span className="drop-shadow-lg transition-colors duration-300 uppercase" style={{ color: baseTextColor }}>{text1}</span>
           <span className="mx-2 font-light opacity-80" style={{ color: customColor }}>+</span>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r drop-shadow-lg"
+          <span className="bg-clip-text text-transparent bg-gradient-to-r drop-shadow-lg uppercase"
                 style={{ backgroundImage: `linear-gradient(to right, ${customColor}, #0575E6)` }}>
-            COMIX
+            {text2}
           </span>
         </div>
       </div>
