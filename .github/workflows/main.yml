@@ -26,16 +26,13 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Clean Cache & Install
-        # Questo comando pulisce la memoria e installa in modo sicuro per evitare errori di rete
-        run: |
-          npm cache clean --force
-          npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Install dependencies
+        # Usa npm ci per installazioni più pulite, o install con flag permissivi
+        run: npm install --no-audit --no-fund --legacy-peer-deps
 
       - name: Build
         run: npm run build
         env:
-          # Assicurati di aver inserito API_KEY nei Secrets del repository
           API_KEY: ${{ secrets.API_KEY }}
 
       - name: Upload artifact
