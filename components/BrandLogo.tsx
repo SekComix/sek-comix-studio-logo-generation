@@ -7,9 +7,10 @@ interface BrandLogoProps {
   showIcon?: boolean;
   // New props for dynamic branding
   customIcon?: React.ReactNode;
+  customImageSrc?: string | null; // NEW: Supporto per immagini utente
   customColor?: string;
   subtitle?: string;
-  theme?: 'dark' | 'light'; // 'dark' = for dark backgrounds (white text), 'light' = for light backgrounds (dark text)
+  theme?: 'dark' | 'light';
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({ 
@@ -17,22 +18,19 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   size = 'md',
   showIcon = true,
   customIcon,
+  customImageSrc,
   customColor = '#00f260', // Default neon green
   subtitle,
   theme = 'dark'
 }) => {
   const sizeConfig = {
-    sm: { text: 'text-lg', icon: 18, space: 'gap-2', sub: 'text-[0.6rem]' },
-    md: { text: 'text-2xl', icon: 26, space: 'gap-3', sub: 'text-[0.7rem]' },
-    lg: { text: 'text-4xl', icon: 40, space: 'gap-4', sub: 'text-xs' },
-    xl: { text: 'text-6xl', icon: 64, space: 'gap-6', sub: 'text-sm' },
+    sm: { text: 'text-lg', icon: 18, space: 'gap-2', sub: 'text-[0.6rem]', imgSize: 'w-5 h-5' },
+    md: { text: 'text-2xl', icon: 26, space: 'gap-3', sub: 'text-[0.7rem]', imgSize: 'w-8 h-8' },
+    lg: { text: 'text-4xl', icon: 40, space: 'gap-4', sub: 'text-xs', imgSize: 'w-12 h-12' },
+    xl: { text: 'text-6xl', icon: 64, space: 'gap-6', sub: 'text-sm', imgSize: 'w-20 h-20' },
   };
 
   const config = sizeConfig[size];
-
-  // Colors based on theme
-  // If theme is 'dark' (background), text should be White.
-  // If theme is 'light' (background), text should be Dark Brand Color.
   const baseTextColor = theme === 'dark' ? '#ffffff' : '#0f0c29';
 
   return (
@@ -46,12 +44,21 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
               style={{ background: customColor }}
             ></div>
             
-            {/* Icon Render - dynamic color */}
+            {/* Icon Render - dynamic color OR Custom Image */}
             <div 
-              className="relative z-10 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] transform group-hover:rotate-12 transition-transform duration-500"
+              className="relative z-10 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] transform group-hover:rotate-12 transition-transform duration-500 flex items-center justify-center"
               style={{ color: baseTextColor }}
             >
-              {customIcon || <Palette size={config.icon} strokeWidth={2.5} />}
+              {customImageSrc ? (
+                <img 
+                  src={customImageSrc} 
+                  alt="Brand Icon" 
+                  className={`${config.imgSize} object-contain`} 
+                  style={{ filter: theme === 'dark' ? 'drop-shadow(0 0 2px rgba(255,255,255,0.2))' : 'none' }}
+                />
+              ) : (
+                customIcon || <Palette size={config.icon} strokeWidth={2.5} />
+              )}
             </div>
           </div>
         )}
