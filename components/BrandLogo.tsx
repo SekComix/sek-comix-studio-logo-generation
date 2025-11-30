@@ -14,6 +14,7 @@ interface BrandLogoProps {
   // Props for changing text
   text1?: string;
   text2?: string;
+  showSeparator?: boolean; // Nuova prop per nascondere il +
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({ 
@@ -26,7 +27,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   subtitle,
   theme = 'dark',
   text1 = 'SEK',
-  text2 = 'COMIX'
+  text2 = 'COMIX',
+  showSeparator = true
 }) => {
   const sizeConfig = {
     sm: { text: 'text-lg', icon: 18, space: 'gap-2', sub: 'text-[0.6rem]', imgSize: 'w-5 h-5' },
@@ -42,7 +44,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
     <div className={`flex flex-col ${className} select-none group`}>
       <div className={`flex items-center ${config.space} font-brand font-black tracking-widest`}>
         {showIcon && (
-          <div className="relative flex items-center justify-center">
+          <div className="relative flex items-center justify-center shrink-0">
             {/* Outer Glow - Dynamic Color */}
             <div 
               className="absolute inset-0 blur-md opacity-40 group-hover:opacity-70 transition-all duration-500 rounded-full scale-125"
@@ -67,10 +69,15 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             </div>
           </div>
         )}
-        <div className={`${config.text} flex items-center`}>
+        <div className={`${config.text} flex items-center whitespace-nowrap`}>
           <span className="drop-shadow-lg transition-colors duration-300 uppercase" style={{ color: baseTextColor }}>{text1}</span>
-          <span className="mx-2 font-light opacity-80" style={{ color: customColor }}>+</span>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r drop-shadow-lg uppercase"
+          
+          {showSeparator && (
+            <span className="mx-2 font-light opacity-80" style={{ color: customColor }}>+</span>
+          )}
+          
+          {/* Aggiungiamo un piccolo margine se non c'è il separatore */}
+          <span className={`bg-clip-text text-transparent bg-gradient-to-r drop-shadow-lg uppercase ${!showSeparator ? 'ml-3' : ''}`}
                 style={{ backgroundImage: `linear-gradient(to right, ${customColor}, #0575E6)` }}>
             {text2}
           </span>
