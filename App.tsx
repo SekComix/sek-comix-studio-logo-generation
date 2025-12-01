@@ -1,65 +1,58 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Sek + Comix Studio</title>
+    
+    <meta name="theme-color" content="#0f0c29" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SekStudio" />
+    
+    <!-- NOTA: Ho rimosso il link manuale al manifest.json perché ora viene generato e iniettato automaticamente da Vite -->
 
-import React from 'react';
-import { BrandLogo } from './components/BrandLogo';
-import ImageEditor from './components/ImageEditor';
-import { BrandKit } from './components/BrandKit';
-import { Sparkles, Info } from 'lucide-react';
-
-const App: React.FC = () => {
-  return (
-    <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-black">
-      
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#0f0c29]/90 backdrop-blur-lg border-b border-white/10 shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          {/* Main Logo - Fixed style for the App itself */}
-          <BrandLogo size="md" subtitle="STUDIO" />
-          
-          <div className="hidden md:flex items-center gap-6 text-sm text-gray-300 font-medium">
-            <span className="hover:text-white cursor-pointer transition-colors">Sek + Comix</span>
-            <div className="w-px h-4 bg-white/20"></div>
-            <div className="flex items-center gap-2 text-brand-accent">
-              <Sparkles size={16} />
-              <span>Gemini 2.5 Pro</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-grow flex flex-col items-center w-full relative">
-        {/* Background Decorative Elements - Subtler */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-purple rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
-
-        <div className="relative z-10 w-full py-12">
-          <div className="text-center mb-10 px-4 animate-fade-in-down">
-            <h1 className="text-4xl md:text-6xl font-black mb-4 font-brand tracking-tight">
-              AI CREATOR <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent to-brand-accent2">STUDIO</span>
-            </h1>
-            <p className="text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
-              Il tuo spazio creativo personale alimentato da Google Gemini.
-            </p>
-          </div>
-
-          <ImageEditor />
-          
-          <BrandKit />
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-white/5 bg-black/40 py-8 mt-auto">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2 opacity-60">
-            <BrandLogo size="sm" showIcon={false} />
-          </div>
-          <p className="text-gray-500 text-xs">
-            © {new Date().getFullYear()} Sek + Comix. Powered by Gemini.
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
-};
-
-export default App;
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FONT GOOGLE -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Lobster&family=Montserrat:wght@400;700;900&family=Orbitron:wght@400;700;900&family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              brand: ['Orbitron', 'sans-serif'],
+              anton: ['Anton', 'sans-serif'],
+              playfair: ['Playfair Display', 'serif'],
+              montserrat: ['Montserrat', 'sans-serif'],
+              lobster: ['Lobster', 'cursive'],
+            },
+            colors: {
+              brand: {
+                dark: '#0f0c29',
+                purple: '#302b63',
+                teal: '#24243e',
+                accent: '#00f260',
+                accent2: '#0575E6'
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        background: linear-gradient(to right, #0f0c29, #302b63, #24243e);
+        color: white;
+      }
+    </style>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>
