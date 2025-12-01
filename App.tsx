@@ -6,13 +6,13 @@ import { Sparkles } from 'lucide-react';
 
 const App: React.FC = () => {
   return (
-    <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-black">
+    <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-black overflow-x-hidden">
       
       {/* Header */}
       <header className="sticky top-0 z-50 bg-[#0f0c29]/90 backdrop-blur-lg border-b border-white/10 shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
           {/* Main Logo - Fixed style for the App itself */}
-          <BrandLogo size="md" subtitle="STUDIO" />
+          <BrandLogo size="md" subtitle="STUDIO" className="scale-75 md:scale-100 origin-left" />
           
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-300 font-medium">
             <span className="hover:text-white cursor-pointer transition-colors">Sek + Comix</span>
@@ -30,12 +30,12 @@ const App: React.FC = () => {
         {/* Background Decorative Elements - Subtler */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-purple rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
 
-        <div className="relative z-10 w-full py-12">
-          <div className="text-center mb-10 px-4 animate-fade-in-down">
-            <h1 className="text-4xl md:text-6xl font-black mb-4 font-brand tracking-tight">
+        <div className="relative z-10 w-full py-8 md:py-12">
+          <div className="text-center mb-8 md:mb-10 px-4 animate-fade-in-down">
+            <h1 className="text-3xl md:text-6xl font-black mb-4 font-brand tracking-tight">
               AI CREATOR <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent to-brand-accent2">STUDIO</span>
             </h1>
-            <p className="text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
+            <p className="text-gray-400 max-w-2xl mx-auto text-sm md:text-lg leading-relaxed">
               Il tuo spazio creativo personale alimentato da Google Gemini.
             </p>
           </div>
@@ -52,7 +52,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2 opacity-60">
             <BrandLogo size="sm" showIcon={false} />
           </div>
-          <p className="text-gray-500 text-xs">
+          <p className="text-gray-500 text-xs text-center">
             © {new Date().getFullYear()} Sek + Comix. Powered by Gemini.
           </p>
         </div>
