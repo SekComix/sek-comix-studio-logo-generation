@@ -4,10 +4,10 @@ import { generateBrandIdentity, BrandIdentityResult } from '../services/geminiSe
 import { 
   Download, Check, Sparkles, ArrowRight, Type, Palette as PaletteIcon, Grid, Sun, Moon,
   Palette, Utensils, Camera, Heart, Code, Music, Dumbbell, Briefcase, Plane, Gamepad2, ShoppingCart, Book, Car, Home, Leaf,
-  Maximize, History, Trash2, FileText, Upload, Image as ImageIcon, Plus, X, RotateCcw, PenTool, Minus
+  Maximize, History, Trash2, FileText, Plus, X, RotateCcw, PenTool, Minus
 } from 'lucide-react';
 
-// Dictionary of Standard Icons
+// Dizionario Icone
 const ICON_MAP: Record<string, { component: React.ReactNode, path: string, label: string }> = {
   'palette': { 
     component: <Palette size={40} strokeWidth={2.5} />, 
@@ -47,9 +47,19 @@ const BG_OPTIONS = [
   { color: '#ffffff', label: 'White' },
 ];
 
+// Font Options Configuration
+const FONT_OPTIONS = [
+  { id: 'orbitron', label: 'Futuro', family: '"Orbitron", sans-serif' },
+  { id: 'anton', label: 'Impact', family: '"Anton", sans-serif' },
+  { id: 'playfair', label: 'Elegante', family: '"Playfair Display", serif' },
+  { id: 'montserrat', label: 'Moderno', family: '"Montserrat", sans-serif' },
+  { id: 'lobster', label: 'Creativo', family: '"Lobster", cursive' },
+];
+
 const DEFAULT_PRESETS = ['Viaggi', 'Cucina', 'Gaming', 'Musica', 'Tech', 'Matrimonio', 'Fitness'];
 
 type DownloadSize = 'sm' | 'md' | 'lg' | 'xl';
+type FontType = 'orbitron' | 'anton' | 'playfair' | 'montserrat' | 'lobster';
 
 // Interface for User Uploaded Icons
 interface CustomUserIcon {
@@ -74,6 +84,7 @@ export const BrandKit: React.FC = () => {
   const [brandName1, setBrandName1] = useState('SEK');
   const [brandName2, setBrandName2] = useState('COMIX');
   const [showSeparator, setShowSeparator] = useState(true); // Toggle for "+"
+  const [selectedFont, setSelectedFont] = useState<FontType>('orbitron');
 
   // Custom Icon Library State
   const [userIcons, setUserIcons] = useState<CustomUserIcon[]>([]);
@@ -114,13 +125,14 @@ export const BrandKit: React.FC = () => {
     setBrandName1('SEK');
     setBrandName2('COMIX');
     setShowSeparator(true);
+    setSelectedFont('orbitron');
   };
 
   // --- CUSTOM ICON LOGIC ---
   const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit check (Increased from 1MB)
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit check
          alert("L'immagine è troppo grande. Usa un file sotto 5MB.");
          return;
       }
@@ -128,7 +140,6 @@ export const BrandKit: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64 = reader.result as string;
-        // Prompt for name
         const name = prompt("Dai un nome a questa icona:", file.name.split('.')[0]) || "Icona";
         
         const newIcon: CustomUserIcon = {
@@ -190,7 +201,7 @@ export const BrandKit: React.FC = () => {
     setPreviewBg(theme === 'light' ? '#ffffff' : '#0f0c29');
   };
 
-  // --- DOWNLOAD LOGIC (UPDATED FOR IMAGES) ---
+  // --- DOWNLOAD LOGIC (UPDATED FOR FONTS) ---
   const downloadLogo = async () => {
     setDownloadStatus('generating');
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -207,8 +218,13 @@ export const BrandKit: React.FC = () => {
       case 'xl': scaleFactor = 4; break;
     }
 
+    // FONT SELECTION LOGIC FOR CANVAS
+    const activeFontObj = FONT_OPTIONS.find(f => f.id === selectedFont) || FONT_OPTIONS[0];
+    const fontString = `900 120px ${activeFontObj.family}`;
+    const fontStringLight = `300 120px ${activeFontObj.family}`;
+
     // Dynamic Width Calculation based on text length
-    ctx.font = `900 120px "Orbitron", sans-serif`; 
+    ctx.font = fontString; 
     const text1Width = ctx.measureText(brandName1).width;
     const plusWidth = ctx.measureText("+").width;
     const text2Width = ctx.measureText(brandName2).width;
@@ -220,12 +236,12 @@ export const BrandKit: React.FC = () => {
     if (showSeparator) {
         middleWidth = spacing + plusWidth + spacing;
     } else {
-        middleWidth = spacing; // Just one spacing between words
+        middleWidth = spacing; 
     }
 
     // Calculate total needed width + padding
     const totalContentWidth = iconSpace + text1Width + middleWidth + text2Width;
-    const baseWidth = Math.max(1200, totalContentWidth + 200); // Minimum 1200 or fit content
+    const baseWidth = Math.max(1200, totalContentWidth + 200); 
     const baseHeight = 500;
     
     canvas.width = baseWidth * scaleFactor;
@@ -234,18 +250,16 @@ export const BrandKit: React.FC = () => {
 
     ctx.clearRect(0, 0, baseWidth, baseHeight);
 
-    const fontSize = 120;
-    const fontBase = `${fontSize}px "Orbitron", sans-serif`;
     const baseFill = logoTheme === 'dark' ? '#ffffff' : '#0f0c29';
     
     // Centering Logic
-    const startX = (baseWidth - totalContentWidth) / 2 + 100; // Start drawing text after icon area
+    const startX = (baseWidth - totalContentWidth) / 2 + 100;
     const centerY = 220;
     const accentColor = currentIdentity.colorHex;
 
     // Helper to finish drawing after image/icon is ready
     const finishDrawing = (imageObj: HTMLImageElement | null) => {
-      // Icon Position (Relative to Text Start)
+      // Icon Position
       const iconCenterX = startX - 120;
 
       // Glow
@@ -261,9 +275,7 @@ export const BrandKit: React.FC = () => {
 
       // Draw Image or SVG
       if (imageObj) {
-        // Draw Image (Custom or SVG converted)
         const size = 100;
-        // If theme is dark, image might need drop shadow if transparent PNG
         if (logoTheme === 'dark') {
             ctx.filter = 'drop-shadow(0 0 2px rgba(255,255,255,0.2))';
         }
@@ -271,7 +283,7 @@ export const BrandKit: React.FC = () => {
         const imgX = iconCenterX - 50;
         const imgY = centerY - 50;
         
-        // Simple Aspect Fit:
+        // Simple Aspect Fit
         const scale = Math.min(size / imageObj.width, size / imageObj.height);
         const w = imageObj.width * scale;
         const h = imageObj.height * scale;
@@ -283,7 +295,7 @@ export const BrandKit: React.FC = () => {
       }
 
       // Text 1: (Brand Name 1)
-      ctx.font = `900 ${fontBase}`;
+      ctx.font = fontString;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.shadowColor = logoTheme === 'dark' ? accentColor : 'transparent';
@@ -295,27 +307,25 @@ export const BrandKit: React.FC = () => {
       let currentX = startX + text1Width;
 
       if (showSeparator) {
-        // Draw +
-        ctx.font = `300 ${fontBase}`;
+        ctx.font = fontStringLight;
         ctx.fillStyle = accentColor;
         ctx.shadowBlur = 0;
         ctx.fillText("+", currentX + spacing, centerY);
         currentX += spacing + plusWidth + spacing;
       } else {
-        // Add just spacing
         currentX += spacing;
       }
 
       // Text 2: (Brand Name 2)
-      ctx.font = `900 ${fontBase}`;
+      ctx.font = fontString;
       const gradient = ctx.createLinearGradient(currentX, 0, currentX + text2Width, 0);
       gradient.addColorStop(0, accentColor);
       gradient.addColorStop(1, '#0575E6'); 
       ctx.fillStyle = gradient;
-      ctx.shadowBlur = 0; // Reset blur for gradient text
+      ctx.shadowBlur = 0; 
       ctx.fillText(brandName2, currentX, centerY);
 
-      // Subtitle (Align to end of second word)
+      // Subtitle
       if (currentIdentity.subtitle) {
         ctx.font = `bold 40px "Inter", sans-serif`;
         ctx.fillStyle = accentColor;
@@ -348,7 +358,6 @@ export const BrandKit: React.FC = () => {
        : null;
 
     if (activeCustomImgData) {
-        // Load User Custom Image
         const img = new Image();
         img.onload = () => finishDrawing(img);
         img.src = activeCustomImgData;
@@ -512,6 +521,25 @@ export const BrandKit: React.FC = () => {
                       </button>
                     </div>
                  </div>
+                 
+                 {/* FONT SELECTION */}
+                 <div>
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                       <Type size={14} /> Stile Carattere
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {FONT_OPTIONS.map((font) => (
+                        <button
+                          key={font.id}
+                          onClick={() => setSelectedFont(font.id as FontType)}
+                          className={`py-2 px-1 text-xs rounded-lg transition-all ${selectedFont === font.id ? 'bg-brand-accent text-black font-bold' : 'bg-black/30 text-gray-400 hover:text-white'}`}
+                          style={{ fontFamily: font.family }}
+                        >
+                          {font.label}
+                        </button>
+                      ))}
+                    </div>
+                 </div>
 
                  {/* Subtitle */}
                  <div>
@@ -552,7 +580,7 @@ export const BrandKit: React.FC = () => {
                    </div>
                  </div>
 
-                 {/* ICON SELECTION - UPDATED WITH TABS */}
+                 {/* ICON SELECTION */}
                  <div>
                    <div className="flex justify-between items-center mb-2">
                      <button 
@@ -674,6 +702,7 @@ export const BrandKit: React.FC = () => {
                     text1={brandName1}
                     text2={brandName2}
                     showSeparator={showSeparator}
+                    font={selectedFont}
                  />
               </div>
             </div>
