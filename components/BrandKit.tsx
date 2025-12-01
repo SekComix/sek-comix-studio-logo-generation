@@ -4,10 +4,10 @@ import { generateBrandIdentity, BrandIdentityResult } from '../services/geminiSe
 import { 
   Download, Check, Sparkles, ArrowRight, Type, Palette as PaletteIcon, Grid, Sun, Moon,
   Palette, Utensils, Camera, Heart, Code, Music, Dumbbell, Briefcase, Plane, Gamepad2, ShoppingCart, Book, Car, Home, Leaf,
-  Maximize, History, Trash2, FileText, Plus, X, RotateCcw, PenTool, Minus
+  Maximize, History, Trash2, FileText, Plus, X, RotateCcw, PenTool, Minus, ZoomIn, ZoomOut, Move
 } from 'lucide-react';
 
-// Dizionario Icone
+// Dictionary of Standard Icons
 const ICON_MAP: Record<string, { component: React.ReactNode, path: string, label: string }> = {
   'palette': { 
     component: <Palette size={40} strokeWidth={2.5} />, 
@@ -47,13 +47,12 @@ const BG_OPTIONS = [
   { color: '#ffffff', label: 'White' },
 ];
 
-// Font Options Configuration
 const FONT_OPTIONS = [
-  { id: 'orbitron', label: 'Futuro', family: '"Orbitron", sans-serif' },
-  { id: 'anton', label: 'Impact', family: '"Anton", sans-serif' },
-  { id: 'playfair', label: 'Elegante', family: '"Playfair Display", serif' },
-  { id: 'montserrat', label: 'Moderno', family: '"Montserrat", sans-serif' },
-  { id: 'lobster', label: 'Creativo', family: '"Lobster", cursive' },
+  { id: 'orbitron', label: 'Orbitron', family: '"Orbitron", sans-serif' },
+  { id: 'anton', label: 'Anton', family: '"Anton", sans-serif' },
+  { id: 'playfair', label: 'Playfair', family: '"Playfair Display", serif' },
+  { id: 'montserrat', label: 'Montserrat', family: '"Montserrat", sans-serif' },
+  { id: 'lobster', label: 'Lobster', family: '"Lobster", cursive' },
 ];
 
 const DEFAULT_PRESETS = ['Viaggi', 'Cucina', 'Gaming', 'Musica', 'Tech', 'Matrimonio', 'Fitness'];
@@ -61,11 +60,10 @@ const DEFAULT_PRESETS = ['Viaggi', 'Cucina', 'Gaming', 'Musica', 'Tech', 'Matrim
 type DownloadSize = 'sm' | 'md' | 'lg' | 'xl';
 type FontType = 'orbitron' | 'anton' | 'playfair' | 'montserrat' | 'lobster';
 
-// Interface for User Uploaded Icons
 interface CustomUserIcon {
   id: string;
   name: string;
-  data: string; // Base64
+  data: string;
 }
 
 export const BrandKit: React.FC = () => {
@@ -80,13 +78,11 @@ export const BrandKit: React.FC = () => {
   const [customFilename, setCustomFilename] = useState('');
   const [logoTheme, setLogoTheme] = useState<'dark' | 'light'>('dark');
 
-  // NAME EDITING STATE
   const [brandName1, setBrandName1] = useState('SEK');
   const [brandName2, setBrandName2] = useState('COMIX');
-  const [showSeparator, setShowSeparator] = useState(true); // Toggle for "+"
+  const [showSeparator, setShowSeparator] = useState(true);
   const [selectedFont, setSelectedFont] = useState<FontType>('orbitron');
 
-  // Custom Icon Library State
   const [userIcons, setUserIcons] = useState<CustomUserIcon[]>([]);
   const [selectedCustomIconId, setSelectedCustomIconId] = useState<string | null>(null);
   const [iconTab, setIconTab] = useState<'standard' | 'custom'>('standard');
@@ -98,7 +94,10 @@ export const BrandKit: React.FC = () => {
     subtitle: 'CREATOR STUDIO'
   });
 
-  // Load presets and custom icons from storage
+  // PREVIEW ZOOM STATE
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [estimatedDims, setEstimatedDims] = useState({ w: 0, h: 0 });
+
   useEffect(() => {
     const storedPresets = localStorage.getItem('sek_brand_presets');
     if (storedPresets) setSavedPresets(JSON.parse(storedPresets));
@@ -107,6 +106,42 @@ export const BrandKit: React.FC = () => {
     const storedIcons = localStorage.getItem('sek_brand_custom_icons');
     if (storedIcons) setUserIcons(JSON.parse(storedIcons));
   }, []);
+
+  // Calculate Dimensions Effect
+  useEffect(() => {
+    // Estimate canvas dimensions based on current settings
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let scaleFactor = 1;
+    switch(downloadSize) {
+      case 'sm': scaleFactor = 0.5; break;
+      case 'md': scaleFactor = 1; break;
+      case 'lg': scaleFactor = 2; break;
+      case 'xl': scaleFactor = 4; break;
+    }
+
+    const activeFontObj = FONT_OPTIONS.find(f => f.id === selectedFont) || FONT_OPTIONS[0];
+    const fontString = `900 120px ${activeFontObj.family}`;
+    ctx.font = fontString; 
+    
+    const text1Width = ctx.measureText(brandName1).width;
+    const plusWidth = ctx.measureText("+").width;
+    const text2Width = ctx.measureText(brandName2).width;
+    const spacing = 30;
+    const iconSpace = 250;
+    
+    let middleWidth = showSeparator ? (spacing + plusWidth + spacing) : spacing;
+    const totalContentWidth = iconSpace + text1Width + middleWidth + text2Width;
+    const baseWidth = Math.max(1200, totalContentWidth + 200);
+    const baseHeight = 500;
+
+    setEstimatedDims({
+      w: Math.round(baseWidth * scaleFactor),
+      h: Math.round(baseHeight * scaleFactor)
+    });
+  }, [brandName1, brandName2, showSeparator, selectedFont, downloadSize]);
 
   const savePreset = (category: string) => {
     const trimmed = category.trim();
@@ -128,31 +163,21 @@ export const BrandKit: React.FC = () => {
     setSelectedFont('orbitron');
   };
 
-  // --- CUSTOM ICON LOGIC ---
   const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit check
+      if (file.size > 5 * 1024 * 1024) { 
          alert("L'immagine è troppo grande. Usa un file sotto 5MB.");
          return;
       }
-
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64 = reader.result as string;
         const name = prompt("Dai un nome a questa icona:", file.name.split('.')[0]) || "Icona";
-        
-        const newIcon: CustomUserIcon = {
-          id: Date.now().toString(),
-          name: name.substring(0, 15),
-          data: base64
-        };
-
+        const newIcon: CustomUserIcon = { id: Date.now().toString(), name: name.substring(0, 15), data: base64 };
         const updatedList = [newIcon, ...userIcons];
         setUserIcons(updatedList);
         localStorage.setItem('sek_brand_custom_icons', JSON.stringify(updatedList));
-        
-        // Auto-select uploaded icon
         setSelectedCustomIconId(newIcon.id);
         setIconTab('custom');
       };
@@ -177,7 +202,6 @@ export const BrandKit: React.FC = () => {
 
     setIsAiLoading(true);
     setShowManualControls(false); 
-    // Reset custom icon selection when generating new standard ID
     setSelectedCustomIconId(null); 
     setIconTab('standard');
 
@@ -201,7 +225,6 @@ export const BrandKit: React.FC = () => {
     setPreviewBg(theme === 'light' ? '#ffffff' : '#0f0c29');
   };
 
-  // --- DOWNLOAD LOGIC (UPDATED FOR FONTS) ---
   const downloadLogo = async () => {
     setDownloadStatus('generating');
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -210,6 +233,7 @@ export const BrandKit: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Re-calculate dimensions (Logic must match Effect above)
     let scaleFactor = 1;
     switch(downloadSize) {
       case 'sm': scaleFactor = 0.5; break;
@@ -218,28 +242,18 @@ export const BrandKit: React.FC = () => {
       case 'xl': scaleFactor = 4; break;
     }
 
-    // FONT SELECTION LOGIC FOR CANVAS
     const activeFontObj = FONT_OPTIONS.find(f => f.id === selectedFont) || FONT_OPTIONS[0];
     const fontString = `900 120px ${activeFontObj.family}`;
     const fontStringLight = `300 120px ${activeFontObj.family}`;
 
-    // Dynamic Width Calculation based on text length
     ctx.font = fontString; 
     const text1Width = ctx.measureText(brandName1).width;
     const plusWidth = ctx.measureText("+").width;
     const text2Width = ctx.measureText(brandName2).width;
     const spacing = 30;
-    const iconSpace = 250; // Space for icon + margins
+    const iconSpace = 250; 
     
-    // Logic handles if Separator is hidden
-    let middleWidth = 0;
-    if (showSeparator) {
-        middleWidth = spacing + plusWidth + spacing;
-    } else {
-        middleWidth = spacing; 
-    }
-
-    // Calculate total needed width + padding
+    let middleWidth = showSeparator ? (spacing + plusWidth + spacing) : spacing;
     const totalContentWidth = iconSpace + text1Width + middleWidth + text2Width;
     const baseWidth = Math.max(1200, totalContentWidth + 200); 
     const baseHeight = 500;
@@ -249,19 +263,13 @@ export const BrandKit: React.FC = () => {
     ctx.scale(scaleFactor, scaleFactor);
 
     ctx.clearRect(0, 0, baseWidth, baseHeight);
-
     const baseFill = logoTheme === 'dark' ? '#ffffff' : '#0f0c29';
-    
-    // Centering Logic
     const startX = (baseWidth - totalContentWidth) / 2 + 100;
     const centerY = 220;
     const accentColor = currentIdentity.colorHex;
 
-    // Helper to finish drawing after image/icon is ready
     const finishDrawing = (imageObj: HTMLImageElement | null) => {
-      // Icon Position
       const iconCenterX = startX - 120;
-
       // Glow
       ctx.save();
       ctx.shadowColor = accentColor;
@@ -273,28 +281,19 @@ export const BrandKit: React.FC = () => {
       ctx.fill();
       ctx.restore();
 
-      // Draw Image or SVG
       if (imageObj) {
         const size = 100;
         if (logoTheme === 'dark') {
             ctx.filter = 'drop-shadow(0 0 2px rgba(255,255,255,0.2))';
         }
-        
-        const imgX = iconCenterX - 50;
-        const imgY = centerY - 50;
-        
-        // Simple Aspect Fit
         const scale = Math.min(size / imageObj.width, size / imageObj.height);
         const w = imageObj.width * scale;
         const h = imageObj.height * scale;
-        const offsetX = (size - w) / 2;
-        const offsetY = (size - h) / 2;
-
-        ctx.drawImage(imageObj, imgX + offsetX, imgY + offsetY, w, h);
-        ctx.filter = 'none'; // reset
+        ctx.drawImage(imageObj, iconCenterX - 50 + (size - w) / 2, centerY - 50 + (size - h) / 2, w, h);
+        ctx.filter = 'none';
       }
 
-      // Text 1: (Brand Name 1)
+      // Text 1
       ctx.font = fontString;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
@@ -303,9 +302,7 @@ export const BrandKit: React.FC = () => {
       ctx.fillStyle = baseFill;
       ctx.fillText(brandName1, startX, centerY);
 
-      // Separator and Text 2 Position
       let currentX = startX + text1Width;
-
       if (showSeparator) {
         ctx.font = fontStringLight;
         ctx.fillStyle = accentColor;
@@ -316,7 +313,7 @@ export const BrandKit: React.FC = () => {
         currentX += spacing;
       }
 
-      // Text 2: (Brand Name 2)
+      // Text 2
       ctx.font = fontString;
       const gradient = ctx.createLinearGradient(currentX, 0, currentX + text2Width, 0);
       gradient.addColorStop(0, accentColor);
@@ -333,7 +330,6 @@ export const BrandKit: React.FC = () => {
         ctx.textAlign = 'right';
         ctx.fillText(currentIdentity.subtitle, currentX + text2Width, centerY + 100); 
       }
-      
       triggerDownload();
     };
 
@@ -352,7 +348,6 @@ export const BrandKit: React.FC = () => {
       setTimeout(() => setDownloadStatus('idle'), 3000);
     };
 
-    // LOAD IMAGE SOURCE
     const activeCustomImgData = selectedCustomIconId 
        ? userIcons.find(i => i.id === selectedCustomIconId)?.data 
        : null;
@@ -362,7 +357,6 @@ export const BrandKit: React.FC = () => {
         img.onload = () => finishDrawing(img);
         img.src = activeCustomImgData;
     } else {
-        // Load Standard SVG
         const iconSvgString = `
         <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="${baseFill}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             ${ICON_MAP[currentIdentity.iconKey]?.path || ICON_MAP['palette'].path}
@@ -379,7 +373,6 @@ export const BrandKit: React.FC = () => {
     }
   };
 
-  // Get active custom image data for preview
   const activeCustomImageSrc = selectedCustomIconId 
       ? userIcons.find(i => i.id === selectedCustomIconId)?.data 
       : null;
@@ -404,368 +397,198 @@ export const BrandKit: React.FC = () => {
               </p>
             </div>
 
-            {/* Quick Choices */}
-            <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-              <div className="flex justify-between items-center mb-3">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                  <History size={14} /> Categorie Rapide
-                </label>
-                <button onClick={clearPresets} className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1">
-                  <Trash2 size={10} /> Reset
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
+            {/* AI Generator & Presets */}
+            <div className="bg-black/20 p-4 rounded-xl border border-white/5 space-y-3">
+               <div className="flex flex-wrap gap-2">
                 {savedPresets.map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => handleGenerateIdentity(preset)}
-                    className="px-3 py-1.5 bg-white/5 hover:bg-brand-accent hover:text-black border border-white/10 rounded-full text-sm transition-all"
-                  >
-                    {preset}
-                  </button>
+                  <button key={preset} onClick={() => handleGenerateIdentity(preset)} className="px-3 py-1.5 bg-white/5 hover:bg-brand-accent hover:text-black border border-white/10 rounded-full text-xs transition-all">{preset}</button>
                 ))}
+                <button onClick={clearPresets} className="text-[10px] text-red-400 p-1"><Trash2 size={12} /></button>
               </div>
-            </div>
-
-            {/* AI Generator */}
-            <div className="bg-black/40 p-6 rounded-2xl border border-white/10 space-y-4">
-              <label className="block text-sm font-medium text-gray-300">
-                Nuova Categoria
-              </label>
               <div className="flex gap-2">
                 <input 
                   type="text" 
                   value={appDescription}
                   onChange={(e) => setAppDescription(e.target.value)}
-                  placeholder="Es. Palestra, News, Finanza..."
-                  className="flex-1 bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-brand-accent outline-none"
+                  placeholder="Nuova categoria..."
+                  className="flex-1 bg-white/5 border border-white/20 rounded-xl px-4 py-2 text-white focus:ring-1 focus:ring-brand-accent outline-none text-sm"
                   onKeyDown={(e) => e.key === 'Enter' && handleGenerateIdentity()}
                 />
-                <button 
-                  onClick={() => handleGenerateIdentity()}
-                  disabled={isAiLoading || !appDescription.trim()}
-                  className="bg-white/10 hover:bg-white/20 text-white p-3 rounded-xl transition-colors disabled:opacity-50"
-                >
-                  <ArrowRight />
+                <button onClick={() => handleGenerateIdentity()} disabled={isAiLoading} className="bg-brand-accent text-black p-2 rounded-xl">
+                  {isAiLoading ? <Sparkles className="animate-spin" /> : <ArrowRight />}
                 </button>
               </div>
-              
-              <button 
-                onClick={() => handleGenerateIdentity()}
-                disabled={isAiLoading || !appDescription.trim()}
-                className={`
-                  w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all
-                  ${isAiLoading 
-                    ? 'bg-brand-accent/20 text-brand-accent cursor-wait' 
-                    : 'bg-brand-accent text-[#0f0c29] hover:bg-white hover:shadow-[0_0_20px_rgba(0,242,96,0.4)]'}
-                `}
-              >
-                {isAiLoading ? 'Analisi in corso...' : <><Sparkles size={18} /> Genera Identità</>}
-              </button>
             </div>
             
             {/* MANUAL CONTROLS */}
-            <div className="space-y-5 animate-fade-in bg-white/5 p-5 rounded-2xl border border-white/10 mt-4">
-                 
-                 {/* Name Editing Section */}
+            <div className="space-y-5 bg-white/5 p-5 rounded-2xl border border-white/10">
+                 {/* Name */}
                  <div>
-                   <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                     <PenTool size={14} /> Nome Brand
-                   </label>
-                   <div className="flex flex-col gap-2">
-                     <div className="flex gap-2 items-center">
-                        <input 
-                          type="text" 
-                          value={brandName1} 
-                          onChange={(e) => setBrandName1(e.target.value.toUpperCase())}
-                          className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none min-w-0"
-                          placeholder="SEK"
-                        />
-                        <button 
-                           onClick={() => setShowSeparator(!showSeparator)}
-                           className={`p-2 rounded-lg font-bold text-sm transition-colors ${showSeparator ? 'text-brand-accent bg-brand-accent/10' : 'text-gray-500 bg-white/5'}`}
-                           title={showSeparator ? "Nascondi separatore" : "Mostra separatore"}
-                        >
-                           {showSeparator ? <Plus size={16} /> : <Minus size={16} />}
-                        </button>
-                        <input 
-                          type="text" 
-                          value={brandName2} 
-                          onChange={(e) => setBrandName2(e.target.value.toUpperCase())}
-                          className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none min-w-0"
-                          placeholder="COMIX"
-                        />
-                     </div>
-                     <div className="flex justify-end">
-                        <button 
-                           onClick={handleResetBrandName} 
-                           className="text-xs text-gray-400 hover:text-white flex items-center gap-1"
-                        >
-                          <RotateCcw size={10} /> Ripristina originale
-                        </button>
-                     </div>
+                   <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2"><PenTool size={14} /> Nome Brand</label>
+                   <div className="flex gap-2 items-center">
+                        <input type="text" value={brandName1} onChange={(e) => setBrandName1(e.target.value.toUpperCase())} className="flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none" placeholder="SEK"/>
+                        <button onClick={() => setShowSeparator(!showSeparator)} className={`p-2 rounded-lg ${showSeparator ? 'text-brand-accent' : 'text-gray-500'}`}>{showSeparator ? <Plus size={16} /> : <Minus size={16} />}</button>
+                        <input type="text" value={brandName2} onChange={(e) => setBrandName2(e.target.value.toUpperCase())} className="flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none" placeholder="COMIX"/>
                    </div>
                  </div>
 
-                 {/* Theme Toggle */}
+                 {/* Theme */}
                  <div>
-                    <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                       <Sun size={14} /> Versione Logo (Contrasto)
-                    </label>
                     <div className="flex bg-black/40 p-1 rounded-xl border border-white/10">
-                      <button onClick={() => toggleTheme('dark')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${logoTheme === 'dark' ? 'bg-[#0f0c29] text-white shadow-lg border border-brand-accent/30' : 'text-gray-400 hover:text-white'}`}>
-                         <Moon size={14} /> Scuri
-                      </button>
-                      <button onClick={() => toggleTheme('light')} className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${logoTheme === 'light' ? 'bg-gray-200 text-[#0f0c29] shadow-lg' : 'text-gray-400 hover:text-white'}`}>
-                         <Sun size={14} /> Chiari
-                      </button>
+                      <button onClick={() => toggleTheme('dark')} className={`flex-1 py-2 rounded-lg text-xs font-bold flex gap-2 justify-center ${logoTheme === 'dark' ? 'bg-[#0f0c29] text-white' : 'text-gray-400'}`}><Moon size={12} /> Dark</button>
+                      <button onClick={() => toggleTheme('light')} className={`flex-1 py-2 rounded-lg text-xs font-bold flex gap-2 justify-center ${logoTheme === 'light' ? 'bg-gray-200 text-black' : 'text-gray-400'}`}><Sun size={12} /> Light</button>
                     </div>
                  </div>
                  
-                 {/* FONT SELECTION */}
+                 {/* Fonts */}
                  <div>
-                    <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                       <Type size={14} /> Stile Carattere
-                    </label>
+                    <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Font</label>
                     <div className="grid grid-cols-3 gap-2">
                       {FONT_OPTIONS.map((font) => (
-                        <button
-                          key={font.id}
-                          onClick={() => setSelectedFont(font.id as FontType)}
-                          className={`py-2 px-1 text-xs rounded-lg transition-all ${selectedFont === font.id ? 'bg-brand-accent text-black font-bold' : 'bg-black/30 text-gray-400 hover:text-white'}`}
-                          style={{ fontFamily: font.family }}
-                        >
-                          {font.label}
-                        </button>
+                        <button key={font.id} onClick={() => setSelectedFont(font.id as FontType)} className={`py-1 px-1 text-[10px] rounded-lg border ${selectedFont === font.id ? 'bg-brand-accent text-black border-brand-accent' : 'border-white/10 text-gray-400'}`} style={{ fontFamily: font.family }}>{font.label}</button>
                       ))}
                     </div>
                  </div>
 
-                 {/* Subtitle */}
+                 {/* Colors */}
                  <div>
-                   <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                     <Type size={14} /> Sottotitolo
-                   </label>
-                   <input 
-                      type="text"
-                      value={currentIdentity.subtitle}
-                      onChange={(e) => updateIdentity({ subtitle: e.target.value.toUpperCase() })}
-                      maxLength={30}
-                      className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-brand-accent outline-none font-bold tracking-widest"
-                   />
-                 </div>
-
-                 {/* Color */}
-                 <div>
-                   <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                     <PaletteIcon size={14} /> Colore Tema
-                   </label>
+                   <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Colore</label>
                    <div className="flex gap-2 flex-wrap">
                       {BRAND_COLORS.map(color => (
-                        <button
-                          key={color}
-                          onClick={() => updateIdentity({ colorHex: color })}
-                          className={`w-8 h-8 rounded-full border-2 transition-all ${currentIdentity.colorHex === color ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-70 hover:opacity-100'}`}
-                          style={{ backgroundColor: color }}
-                        />
+                        <button key={color} onClick={() => updateIdentity({ colorHex: color })} className={`w-6 h-6 rounded-full border-2 ${currentIdentity.colorHex === color ? 'border-white scale-110' : 'border-transparent opacity-50'}`} style={{ backgroundColor: color }} />
                       ))}
-                      <div className="relative w-8 h-8 rounded-full overflow-hidden border border-white/20">
-                         <input 
-                           type="color" 
-                           value={currentIdentity.colorHex}
-                           onChange={(e) => updateIdentity({ colorHex: e.target.value })}
-                           className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer p-0 border-0"
-                         />
-                      </div>
+                      <input type="color" value={currentIdentity.colorHex} onChange={(e) => updateIdentity({ colorHex: e.target.value })} className="w-6 h-6 rounded-full overflow-hidden cursor-pointer border-0 p-0" />
                    </div>
                  </div>
 
-                 {/* ICON SELECTION */}
-                 <div>
-                   <div className="flex justify-between items-center mb-2">
-                     <button 
-                        onClick={() => setShowManualControls(!showManualControls)}
-                        className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider hover:text-white"
-                     >
-                       <Grid size={14} /> Modifica Icona {showManualControls ? '(Chiudi)' : '(Apri)'}
-                     </button>
-                   </div>
-                   
-                   {showManualControls && (
-                     <div className="bg-black/20 rounded-xl p-3 animate-fade-in border border-white/5">
-                        
-                        {/* Tabs */}
-                        <div className="flex gap-2 mb-3 border-b border-white/10 pb-2">
-                          <button 
-                            onClick={() => setIconTab('standard')}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${iconTab === 'standard' ? 'bg-brand-accent text-black' : 'text-gray-400 hover:text-white'}`}
-                          >
-                            Standard
-                          </button>
-                          <button 
-                            onClick={() => setIconTab('custom')}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${iconTab === 'custom' ? 'bg-brand-accent text-black' : 'text-gray-400 hover:text-white'}`}
-                          >
-                            Le Mie Icone
-                          </button>
+                 {/* Icons Toggle */}
+                 <button onClick={() => setShowManualControls(!showManualControls)} className="w-full text-xs bg-white/5 py-2 rounded-lg text-gray-400 hover:text-white border border-white/5">
+                   {showManualControls ? 'Chiudi Icone' : 'Scegli Icona / Carica Immagine'}
+                 </button>
+                 
+                 {showManualControls && (
+                     <div className="bg-black/20 rounded-xl p-3 border border-white/5 animate-fade-in">
+                        <div className="flex gap-2 mb-2 pb-2 border-b border-white/10">
+                          <button onClick={() => setIconTab('standard')} className={`flex-1 text-[10px] font-bold py-1 rounded ${iconTab === 'standard' ? 'bg-brand-accent text-black' : 'text-gray-400'}`}>Standard</button>
+                          <button onClick={() => setIconTab('custom')} className={`flex-1 text-[10px] font-bold py-1 rounded ${iconTab === 'custom' ? 'bg-brand-accent text-black' : 'text-gray-400'}`}>Uploads</button>
                         </div>
-
-                        {/* Standard Icons */}
-                        {iconTab === 'standard' && (
-                          <div className="grid grid-cols-5 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                              {Object.keys(ICON_MAP).map(iconKey => {
-                                const IconComp = ICON_MAP[iconKey].component;
-                                const SmallIcon = React.cloneElement(IconComp as React.ReactElement<{ size: number }>, { size: 18 });
-                                return (
-                                  <button
-                                    key={iconKey}
-                                    onClick={() => { updateIdentity({ iconKey }); setSelectedCustomIconId(null); }}
-                                    title={ICON_MAP[iconKey].label}
-                                    className={`aspect-square rounded-lg flex items-center justify-center transition-all ${currentIdentity.iconKey === iconKey && !selectedCustomIconId ? 'bg-brand-accent text-black' : 'bg-black/40 text-gray-400 hover:bg-white/10 hover:text-white'}`}
-                                  >
-                                    {SmallIcon}
-                                  </button>
-                                );
-                              })}
+                        {iconTab === 'standard' ? (
+                          <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto custom-scrollbar">
+                              {Object.keys(ICON_MAP).map(key => (
+                                <button key={key} onClick={() => { updateIdentity({ iconKey: key }); setSelectedCustomIconId(null); }} className={`aspect-square rounded flex items-center justify-center ${currentIdentity.iconKey === key && !selectedCustomIconId ? 'bg-brand-accent text-black' : 'bg-black/40 text-gray-500'}`}>{React.cloneElement(ICON_MAP[key].component as any, { size: 16 })}</button>
+                              ))}
                           </div>
-                        )}
-
-                        {/* Custom Icons (My Images) */}
-                        {iconTab === 'custom' && (
-                          <div className="space-y-3">
-                             <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                                {/* Upload Button */}
-                                <button
-                                  onClick={() => fileInputRef.current?.click()}
-                                  className="aspect-square rounded-lg border border-dashed border-white/20 flex flex-col items-center justify-center text-gray-500 hover:text-brand-accent hover:border-brand-accent hover:bg-white/5 transition-all gap-1 group"
-                                  title="Carica Nuova"
-                                >
-                                  <Plus size={16} />
-                                  <span className="text-[9px] uppercase font-bold">Add</span>
-                                </button>
-                                <input type="file" ref={fileInputRef} onChange={handleIconUpload} accept="image/png, image/jpeg, image/webp" className="hidden" />
-
-                                {/* User Images */}
-                                {userIcons.map(icon => (
-                                  <div key={icon.id} className="relative group/item">
-                                    <button
-                                      onClick={() => setSelectedCustomIconId(icon.id)}
-                                      className={`w-full aspect-square rounded-lg flex items-center justify-center overflow-hidden border transition-all ${selectedCustomIconId === icon.id ? 'border-brand-accent bg-brand-accent/20' : 'border-transparent bg-black/40'}`}
-                                      title={icon.name}
-                                    >
-                                      <img src={icon.data} alt={icon.name} className="w-8 h-8 object-contain" />
-                                    </button>
-                                    {/* Delete Button */}
-                                    <button 
-                                      onClick={(e) => deleteCustomIcon(icon.id, e)}
-                                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity hover:scale-110"
-                                    >
-                                      <X size={10} />
-                                    </button>
-                                    <span className="absolute bottom-0 left-0 right-0 text-[8px] text-center bg-black/60 text-white truncate px-1 opacity-0 group-hover/item:opacity-100 pointer-events-none">
-                                      {icon.name}
-                                    </span>
-                                  </div>
-                                ))}
-                             </div>
-                             {userIcons.length === 0 && (
-                               <p className="text-xs text-gray-500 text-center py-2">
-                                 Nessuna icona salvata. Carica la tua prima immagine!
-                               </p>
-                             )}
+                        ) : (
+                          <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto custom-scrollbar">
+                              <button onClick={() => fileInputRef.current?.click()} className="aspect-square border border-dashed border-white/20 rounded flex items-center justify-center text-gray-500 hover:text-brand-accent"><Plus size={16}/></button>
+                              <input type="file" ref={fileInputRef} onChange={handleIconUpload} accept="image/*" className="hidden" />
+                              {userIcons.map(icon => (
+                                <div key={icon.id} className="relative group/item">
+                                  <button onClick={() => setSelectedCustomIconId(icon.id)} className={`w-full aspect-square rounded border overflow-hidden ${selectedCustomIconId === icon.id ? 'border-brand-accent' : 'border-transparent bg-black/40'}`}><img src={icon.data} className="w-full h-full object-contain" /></button>
+                                  <button onClick={(e) => deleteCustomIcon(icon.id, e)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover/item:opacity-100"><X size={8}/></button>
+                                </div>
+                              ))}
                           </div>
                         )}
                      </div>
-                   )}
-                 </div>
-
+                 )}
               </div>
           </div>
 
           {/* RIGHT: Preview & Download */}
-          <div className="flex flex-col items-center justify-center space-y-6">
+          <div className="flex flex-col space-y-4">
             
-            {/* Preview */}
-            <div 
-              className="w-full aspect-[2/1] border-2 border-dashed border-white/10 rounded-2xl flex items-center justify-center p-8 relative group transition-colors duration-300 overflow-hidden"
-              style={{ backgroundColor: previewBg }}
-            >
-              <div className="transform scale-75 md:scale-100 transition-all duration-500">
-                 <BrandLogo 
-                    size="lg" 
-                    // Logic: Pass standard component OR custom image
-                    customIcon={!selectedCustomIconId ? ICON_MAP[currentIdentity.iconKey]?.component : undefined}
-                    customImageSrc={activeCustomImageSrc}
-                    customColor={currentIdentity.colorHex}
-                    subtitle={currentIdentity.subtitle}
-                    theme={logoTheme}
-                    text1={brandName1}
-                    text2={brandName2}
-                    showSeparator={showSeparator}
-                    font={selectedFont}
+            {/* Real-time Dims & Zoom Controls */}
+            <div className="flex justify-between items-end px-2">
+              <div>
+                <span className="text-[10px] uppercase text-gray-500 font-bold block">Risoluzione Reale</span>
+                <span className="text-xl font-mono text-brand-accent font-bold tracking-tight">{estimatedDims.w} x {estimatedDims.h} <span className="text-xs text-gray-500">px</span></span>
+              </div>
+              <div className="flex items-center gap-2 bg-black/40 p-1 rounded-lg border border-white/10">
+                 <button onClick={() => setZoomLevel(Math.max(0.1, zoomLevel - 0.1))} className="p-1 hover:text-white text-gray-400"><ZoomOut size={14}/></button>
+                 <input 
+                    type="range" min="0.1" max="2" step="0.1" 
+                    value={zoomLevel} onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
+                    className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
                  />
+                 <button onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.1))} className="p-1 hover:text-white text-gray-400"><ZoomIn size={14}/></button>
+                 <button onClick={() => setZoomLevel(1)} className="text-[10px] font-bold px-2 py-1 bg-white/10 rounded text-gray-300 hover:text-white">RESET</button>
               </div>
             </div>
 
-            {/* Background Controls */}
-            <div className="flex items-center gap-3 bg-black/30 p-2 rounded-full border border-white/5">
-              <span className="text-[10px] uppercase text-gray-500 font-bold px-2">Sfondo Anteprima:</span>
-              {BG_OPTIONS.map((opt) => (
-                <button
-                  key={opt.color}
-                  onClick={() => setPreviewBg(opt.color)}
-                  className={`w-6 h-6 rounded-full border border-white/10 hover:scale-110 transition-transform ${previewBg === opt.color ? 'ring-2 ring-brand-accent ring-offset-2 ring-offset-[#1a1638]' : ''}`}
-                  style={{ backgroundColor: opt.color }}
-                  title={`Sfondo ${opt.label}`}
-                />
-              ))}
+            {/* Preview Box with Pan/Zoom */}
+            <div 
+              className="w-full h-[400px] border-2 border-dashed border-white/10 rounded-2xl overflow-hidden relative group"
+              style={{ backgroundColor: previewBg }}
+            >
+              <div className="absolute top-2 right-2 z-20 flex gap-2">
+                 {BG_OPTIONS.map((opt) => (
+                    <button key={opt.color} onClick={() => setPreviewBg(opt.color)} className={`w-4 h-4 rounded-full border border-white/20 ${previewBg === opt.color ? 'ring-1 ring-white' : ''}`} style={{ backgroundColor: opt.color }} />
+                 ))}
+              </div>
+              
+              <div 
+                className="w-full h-full flex items-center justify-center overflow-auto cursor-move custom-scrollbar"
+                style={{ 
+                  transform: `scale(${zoomLevel})`, 
+                  transformOrigin: 'center center',
+                  transition: 'transform 0.1s ease-out'
+                }}
+              >
+                 <div className="pointer-events-none select-none">
+                    <BrandLogo 
+                        size="xl" // Use largest base for preview consistency
+                        customIcon={!selectedCustomIconId ? ICON_MAP[currentIdentity.iconKey]?.component : undefined}
+                        customImageSrc={activeCustomImageSrc}
+                        customColor={currentIdentity.colorHex}
+                        subtitle={currentIdentity.subtitle}
+                        theme={logoTheme}
+                        text1={brandName1}
+                        text2={brandName2}
+                        showSeparator={showSeparator}
+                        font={selectedFont}
+                    />
+                 </div>
+              </div>
+              
+              {/* Scale Indicator Overlay */}
+              <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-[10px] text-gray-400 pointer-events-none">
+                Zoom: {Math.round(zoomLevel * 100)}%
+              </div>
             </div>
 
-            {/* Export */}
-            <div className="w-full bg-white/5 p-4 rounded-xl border border-white/10 space-y-4">
-               <div>
-                 <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                   <Maximize size={14} /> Dimensione Export
-                 </label>
-                 <div className="grid grid-cols-4 gap-2">
-                   {[{ id: 'sm', label: 'Piccolo' }, { id: 'md', label: 'Normale' }, { id: 'lg', label: 'Grande' }, { id: 'xl', label: 'Extra' }].map((s) => (
-                     <button
-                       key={s.id}
-                       onClick={() => setDownloadSize(s.id as DownloadSize)}
-                       className={`py-2 text-xs font-bold rounded-lg transition-all ${downloadSize === s.id ? 'bg-brand-accent text-black' : 'bg-black/30 text-gray-400 hover:text-white'}`}
-                     >
-                       {s.label}
-                     </button>
-                   ))}
-                 </div>
+            {/* Export Size Selector */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+               <label className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-2"><Maximize size={14} /> Taglia Export</label>
+               <div className="grid grid-cols-4 gap-2 mb-4">
+                 {[
+                    { id: 'sm', label: 'S (Web)' }, 
+                    { id: 'md', label: 'M (HD)' }, 
+                    { id: 'lg', label: 'L (2K)' }, 
+                    { id: 'xl', label: 'XL (4K)' }
+                 ].map((s) => (
+                   <button
+                     key={s.id}
+                     onClick={() => { setDownloadSize(s.id as DownloadSize); setZoomLevel(1); }}
+                     className={`py-2 text-xs font-bold rounded-lg transition-all ${downloadSize === s.id ? 'bg-brand-accent text-black' : 'bg-black/30 text-gray-400 hover:text-white'}`}
+                   >
+                     {s.label}
+                   </button>
+                 ))}
                </div>
-
-               <div>
-                 <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                   <FileText size={14} /> Nome File (Opzionale)
-                 </label>
-                 <div className="flex bg-black/30 rounded-lg border border-white/10 focus-within:border-brand-accent/50 transition-colors">
-                    <input 
-                      type="text" 
-                      value={customFilename}
-                      onChange={(e) => setCustomFilename(e.target.value)}
-                      placeholder={`Es. ${brandName1}${brandName2}-${currentIdentity.subtitle}`}
-                      className="bg-transparent w-full px-3 py-2 text-sm text-white outline-none placeholder-gray-600"
-                    />
-                    <div className="px-3 py-2 text-xs text-gray-500 font-mono bg-white/5 border-l border-white/5">.png</div>
-                 </div>
+               
+               <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Nome File</label>
+               <div className="flex bg-black/30 rounded-lg border border-white/10 mb-4">
+                  <input type="text" value={customFilename} onChange={(e) => setCustomFilename(e.target.value)} placeholder={`${brandName1}...`} className="bg-transparent w-full px-3 py-2 text-sm text-white outline-none"/>
+                  <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 border-l border-white/5">.png</div>
                </div>
 
                <button 
                  onClick={downloadLogo}
                  disabled={downloadStatus === 'generating'}
-                 className={`
-                   w-full py-3 rounded-xl font-brand font-bold text-lg tracking-wider
-                   flex items-center justify-center gap-3 transition-all shadow-lg
-                   ${downloadStatus === 'done' ? 'bg-green-500 text-black' : 'bg-gradient-to-r from-[#302b63] to-[#24243e] hover:from-brand-accent hover:to-brand-accent2 hover:text-white border border-white/10'}
-                 `}
+                 className={`w-full py-3 rounded-xl font-brand font-bold text-lg flex items-center justify-center gap-3 transition-all ${downloadStatus === 'done' ? 'bg-green-500 text-black' : 'bg-gradient-to-r from-[#302b63] to-[#24243e] hover:from-brand-accent hover:to-brand-accent2 hover:text-white border border-white/10'}`}
                >
-                 {downloadStatus === 'generating' ? 'Preparazione file...' : downloadStatus === 'done' ? <><Check size={24} /> SCARICATO!</> : <><Download size={24} /> SCARICA</>}
+                 {downloadStatus === 'generating' ? '...' : downloadStatus === 'done' ? <Check /> : <><Download /> SCARICA</>}
                </button>
             </div>
 
