@@ -4,7 +4,7 @@ import { generateBrandIdentity, BrandIdentityResult } from '../services/geminiSe
 import { 
   Download, Check, Sparkles, ArrowRight, Type, Palette as PaletteIcon, Grid, Sun, Moon,
   Palette, Utensils, Camera, Heart, Code, Music, Dumbbell, Briefcase, Plane, Gamepad2, ShoppingCart, Book, Car, Home, Leaf,
-  Maximize, History, Trash2, FileText, Plus, X, RotateCcw, PenTool, Minus, ZoomIn, ZoomOut, Move
+  Maximize, History, Trash2, FileText, Upload, Plus, X, RotateCcw, PenTool, Minus, ZoomIn, ZoomOut, Monitor, CreditCard, Zap
 } from 'lucide-react';
 
 // Dictionary of Standard Icons
@@ -22,7 +22,7 @@ const ICON_MAP: Record<string, { component: React.ReactNode, path: string, label
   'dumbbell': { component: <Dumbbell size={40} strokeWidth={2.5} />, label: 'Sport', path: "M6.5 6.5l11 11 M21 21l-1-1 M3 3l1 1 M18 22l4-4 M2 6l4-4 M3 10l7-7 M14 21l7-7" },
   'briefcase': { component: <Briefcase size={40} strokeWidth={2.5} />, label: 'Lavoro', path: "M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16 M2 11h20 M2 11v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-9" },
   'plane': { component: <Plane size={40} strokeWidth={2.5} />, label: 'Viaggi', path: "M2 12h20 M13 12l3-7 M6 12l3 7" },
-  'gamepad': { component: <Gamepad2 size={40} strokeWidth={2.5} />, label: 'Giochi', path: "M6 11h4 M8 9v4 M15 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2 M18 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2 M2 12c0-4.4 3.6-8 8-8h4c4.4 0 8 3.6 8 8v1a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4v-1z" },
+  'gamepad': { component: <Gamepad2 size={40} strokeWidth={2.5} />, label: 'Giochi', path: "M6 11h4 M8 9v4 M15 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2 M18 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2 M2 12c0-4.4 3.6-8 8-8h4c4.4 0 8 3.6 8 8v1a4 4 0 0 1-4 4H6a4 4 0 0 1-4 4v-1z" },
   'shopping-cart': { component: <ShoppingCart size={40} strokeWidth={2.5} />, label: 'Shop', path: "M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" },
   'book': { component: <Book size={40} strokeWidth={2.5} />, label: 'Libri', path: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" },
   'car': { component: <Car size={40} strokeWidth={2.5} />, label: 'Auto', path: "M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-1l-4.72-1.06a3 3 0 0 0-1.22-.32H7.78a3 3 0 0 0-1.22.32L1.84 11.85a1 1 0 0 0-.84 1V16h3m15 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-15 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" },
@@ -109,7 +109,6 @@ export const BrandKit: React.FC = () => {
 
   // Calculate Dimensions Effect
   useEffect(() => {
-    // Estimate canvas dimensions based on current settings
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -233,7 +232,6 @@ export const BrandKit: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Re-calculate dimensions (Logic must match Effect above)
     let scaleFactor = 1;
     switch(downloadSize) {
       case 'sm': scaleFactor = 0.5; break;
@@ -270,7 +268,6 @@ export const BrandKit: React.FC = () => {
 
     const finishDrawing = (imageObj: HTMLImageElement | null) => {
       const iconCenterX = startX - 120;
-      // Glow
       ctx.save();
       ctx.shadowColor = accentColor;
       ctx.shadowBlur = 60;
@@ -293,7 +290,6 @@ export const BrandKit: React.FC = () => {
         ctx.filter = 'none';
       }
 
-      // Text 1
       ctx.font = fontString;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
@@ -313,7 +309,6 @@ export const BrandKit: React.FC = () => {
         currentX += spacing;
       }
 
-      // Text 2
       ctx.font = fontString;
       const gradient = ctx.createLinearGradient(currentX, 0, currentX + text2Width, 0);
       gradient.addColorStop(0, accentColor);
@@ -322,7 +317,6 @@ export const BrandKit: React.FC = () => {
       ctx.shadowBlur = 0; 
       ctx.fillText(brandName2, currentX, centerY);
 
-      // Subtitle
       if (currentIdentity.subtitle) {
         ctx.font = `bold 40px "Inter", sans-serif`;
         ctx.fillStyle = accentColor;
@@ -430,6 +424,9 @@ export const BrandKit: React.FC = () => {
                         <button onClick={() => setShowSeparator(!showSeparator)} className={`p-2 rounded-lg ${showSeparator ? 'text-brand-accent' : 'text-gray-500'}`}>{showSeparator ? <Plus size={16} /> : <Minus size={16} />}</button>
                         <input type="text" value={brandName2} onChange={(e) => setBrandName2(e.target.value.toUpperCase())} className="flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-sm font-bold text-white text-center focus:border-brand-accent outline-none" placeholder="COMIX"/>
                    </div>
+                   <div className="flex justify-end mt-1">
+                      <button onClick={handleResetBrandName} className="text-[10px] text-gray-500 hover:text-white flex items-center gap-1"><RotateCcw size={10} /> Reset Nomi</button>
+                   </div>
                  </div>
 
                  {/* Theme */}
@@ -495,7 +492,7 @@ export const BrandKit: React.FC = () => {
               </div>
           </div>
 
-          {/* RIGHT: Preview & Download */}
+          {/* RIGHT: Preview, Download & MOCKUPS */}
           <div className="flex flex-col space-y-4">
             
             {/* Real-time Dims & Zoom Controls */}
@@ -518,7 +515,7 @@ export const BrandKit: React.FC = () => {
 
             {/* Preview Box with Pan/Zoom */}
             <div 
-              className="w-full h-[400px] border-2 border-dashed border-white/10 rounded-2xl overflow-hidden relative group"
+              className="w-full h-[300px] border-2 border-dashed border-white/10 rounded-2xl overflow-hidden relative group"
               style={{ backgroundColor: previewBg }}
             >
               <div className="absolute top-2 right-2 z-20 flex gap-2">
@@ -535,9 +532,10 @@ export const BrandKit: React.FC = () => {
                   transition: 'transform 0.1s ease-out'
                 }}
               >
-                 <div className="pointer-events-none select-none">
+                 <div className="pointer-events-none select-none transform transition-all duration-500 ease-out origin-center">
                     <BrandLogo 
-                        size="xl" // Use largest base for preview consistency
+                        key={downloadSize} // FORCE RE-RENDER ON SIZE CHANGE
+                        size={downloadSize} 
                         customIcon={!selectedCustomIconId ? ICON_MAP[currentIdentity.iconKey]?.component : undefined}
                         customImageSrc={activeCustomImageSrc}
                         customColor={currentIdentity.colorHex}
@@ -549,11 +547,6 @@ export const BrandKit: React.FC = () => {
                         font={selectedFont}
                     />
                  </div>
-              </div>
-              
-              {/* Scale Indicator Overlay */}
-              <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-[10px] text-gray-400 pointer-events-none">
-                Zoom: {Math.round(zoomLevel * 100)}%
               </div>
             </div>
 
@@ -577,7 +570,6 @@ export const BrandKit: React.FC = () => {
                  ))}
                </div>
                
-               <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Nome File</label>
                <div className="flex bg-black/30 rounded-lg border border-white/10 mb-4">
                   <input type="text" value={customFilename} onChange={(e) => setCustomFilename(e.target.value)} placeholder={`${brandName1}...`} className="bg-transparent w-full px-3 py-2 text-sm text-white outline-none"/>
                   <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 border-l border-white/5">.png</div>
@@ -590,6 +582,94 @@ export const BrandKit: React.FC = () => {
                >
                  {downloadStatus === 'generating' ? '...' : downloadStatus === 'done' ? <Check /> : <><Download /> SCARICA</>}
                </button>
+            </div>
+
+            {/* CLIENT SHOWCASE (MOCKUPS) - THE "WOW" FEATURE */}
+            <div className="bg-gradient-to-br from-[#0f0c29] to-[#1a1638] p-4 rounded-xl border border-brand-accent/20">
+               <h3 className="text-sm font-bold text-brand-accent uppercase tracking-widest mb-4 flex items-center gap-2">
+                 <Monitor size={16} /> Vetrina Clienti (Mockup)
+               </h3>
+               
+               <div className="space-y-6">
+                  {/* SCENARIO 1: NEON SIGN */}
+                  <div className="relative h-40 rounded-lg overflow-hidden border border-white/5 shadow-2xl group cursor-pointer hover:border-brand-accent/50 transition-colors">
+                     {/* Background: Brick Wall Simulation */}
+                     <div className="absolute inset-0 bg-[#0a0a0a]" style={{ backgroundImage: 'radial-gradient(circle at center, #1a1638 0%, #000000 100%)' }}></div>
+                     <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, #333 19px, #333 20px), repeating-linear-gradient(90deg, transparent, transparent 39px, #333 39px, #333 40px)' }}></div>
+                     
+                     <div className="absolute inset-0 flex items-center justify-center transform scale-75 group-hover:scale-90 transition-transform duration-700">
+                        {/* Force Dark Theme & Glow for Neon Look */}
+                        <div className="filter drop-shadow-[0_0_15px_rgba(0,242,96,0.8)]">
+                           <BrandLogo 
+                              size="lg" 
+                              customIcon={!selectedCustomIconId ? ICON_MAP[currentIdentity.iconKey]?.component : undefined}
+                              customImageSrc={activeCustomImageSrc}
+                              customColor={currentIdentity.colorHex}
+                              subtitle={currentIdentity.subtitle}
+                              theme="dark" // Always dark for neon
+                              text1={brandName1}
+                              text2={brandName2}
+                              showSeparator={showSeparator}
+                              font={selectedFont}
+                           />
+                        </div>
+                     </div>
+                     <div className="absolute bottom-2 left-2 text-[10px] font-bold bg-black/50 px-2 py-1 rounded text-white backdrop-blur-sm"><Zap size={10} className="inline mr-1"/> INSEGNA NEON</div>
+                  </div>
+
+                  {/* SCENARIO 2: BUSINESS CARD */}
+                  <div className="relative h-40 rounded-lg overflow-hidden border border-white/5 bg-[#e0e0e0] group cursor-pointer hover:border-brand-accent/50 transition-colors">
+                     {/* Paper Texture */}
+                     <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
+                     
+                     {/* Card Container with 3D transform */}
+                     <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-white w-64 h-36 shadow-xl flex items-center justify-center transform transition-transform duration-700 group-hover:rotate-0" style={{ transform: 'perspective(1000px) rotateX(10deg) rotateY(-10deg) rotateZ(2deg)' }}>
+                           <div className="transform scale-50">
+                             <BrandLogo 
+                                size="md" 
+                                customIcon={!selectedCustomIconId ? ICON_MAP[currentIdentity.iconKey]?.component : undefined}
+                                customImageSrc={activeCustomImageSrc}
+                                customColor={currentIdentity.colorHex}
+                                subtitle={currentIdentity.subtitle}
+                                theme="light" // Always light for paper
+                                text1={brandName1}
+                                text2={brandName2}
+                                showSeparator={showSeparator}
+                                font={selectedFont}
+                             />
+                           </div>
+                        </div>
+                     </div>
+                     <div className="absolute bottom-2 left-2 text-[10px] font-bold bg-white/80 text-black px-2 py-1 rounded backdrop-blur-sm"><CreditCard size={10} className="inline mr-1"/> BUSINESS CARD</div>
+                  </div>
+
+                  {/* SCENARIO 3: GLASS TOTEM */}
+                  <div className="relative h-40 rounded-lg overflow-hidden border border-white/5 bg-gray-900 group cursor-pointer hover:border-brand-accent/50 transition-colors">
+                     {/* Abstract Background */}
+                     <div className="absolute inset-0 opacity-50" style={{ background: `linear-gradient(45deg, ${currentIdentity.colorHex}44, transparent)` }}></div>
+                     
+                     {/* Glass Effect */}
+                     <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-full h-24 bg-white/5 backdrop-blur-md border-y border-white/10 flex items-center justify-center transform group-hover:scale-105 transition-transform duration-700">
+                             <BrandLogo 
+                                size="lg" 
+                                customIcon={!selectedCustomIconId ? ICON_MAP[currentIdentity.iconKey]?.component : undefined}
+                                customImageSrc={activeCustomImageSrc}
+                                customColor={currentIdentity.colorHex}
+                                subtitle={currentIdentity.subtitle}
+                                theme="dark"
+                                text1={brandName1}
+                                text2={brandName2}
+                                showSeparator={showSeparator}
+                                font={selectedFont}
+                             />
+                        </div>
+                     </div>
+                     <div className="absolute bottom-2 left-2 text-[10px] font-bold bg-black/50 px-2 py-1 rounded text-white backdrop-blur-sm"><Monitor size={10} className="inline mr-1"/> TOTEM VETRO</div>
+                  </div>
+
+               </div>
             </div>
 
           </div>
