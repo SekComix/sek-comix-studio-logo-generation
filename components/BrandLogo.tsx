@@ -14,7 +14,9 @@ interface BrandLogoProps {
   // Props for changing text
   text1?: string;
   text2?: string;
-  showSeparator?: boolean; // Nuova prop per nascondere il +
+  showSeparator?: boolean;
+  // Prop per il Font
+  font?: 'orbitron' | 'anton' | 'playfair' | 'montserrat' | 'lobster';
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({ 
@@ -28,7 +30,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   theme = 'dark',
   text1 = 'SEK',
   text2 = 'COMIX',
-  showSeparator = true
+  showSeparator = true,
+  font = 'orbitron'
 }) => {
   const sizeConfig = {
     sm: { text: 'text-lg', icon: 18, space: 'gap-2', sub: 'text-[0.6rem]', imgSize: 'w-5 h-5' },
@@ -40,9 +43,20 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const config = sizeConfig[size];
   const baseTextColor = theme === 'dark' ? '#ffffff' : '#0f0c29';
 
+  // Mappa i nomi dei font alle classi Tailwind definite in index.html
+  const fontClassMap = {
+    orbitron: 'font-brand',
+    anton: 'font-anton tracking-wide',
+    playfair: 'font-playfair tracking-normal italic',
+    montserrat: 'font-montserrat tracking-tighter',
+    lobster: 'font-lobster tracking-normal',
+  };
+
+  const selectedFontClass = fontClassMap[font] || fontClassMap['orbitron'];
+
   return (
     <div className={`flex flex-col ${className} select-none group`}>
-      <div className={`flex items-center ${config.space} font-brand font-black tracking-widest`}>
+      <div className={`flex items-center ${config.space} ${selectedFontClass} font-black`}>
         {showIcon && (
           <div className="relative flex items-center justify-center shrink-0">
             {/* Outer Glow - Dynamic Color */}
