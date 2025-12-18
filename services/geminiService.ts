@@ -1,7 +1,5 @@
-import { GoogleGenAI, Type } from "@google/genai";
 
-// Initialize the client strictly as per guidelines
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+import { GoogleGenAI, Type } from "@google/genai";
 
 export const editImageWithGemini = async (
   base64Image: string,
@@ -11,6 +9,9 @@ export const editImageWithGemini = async (
   if (!process.env.API_KEY) {
     throw new Error("API Key mancante. Assicurati che process.env.API_KEY sia configurato.");
   }
+
+  // Initialize the client right before usage as per guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
     // Clean base64 string if it contains the data URL prefix
@@ -62,6 +63,9 @@ export interface BrandIdentityResult {
 export const generateBrandIdentity = async (description: string): Promise<BrandIdentityResult> => {
   if (!process.env.API_KEY) throw new Error("API Key mancante.");
 
+  // Initialize the client right before usage as per guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
   try {
     const prompt = `
       Sei un esperto di Brand Identity per un creatore di app chiamato "Sek + Comix".
@@ -79,8 +83,9 @@ export const generateBrandIdentity = async (description: string): Promise<BrandI
       Rispondi ESCLUSIVAMENTE con un oggetto JSON.
     `;
 
+    // Using gemini-3-flash-preview for basic text tasks as per guidelines
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
