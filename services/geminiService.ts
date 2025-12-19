@@ -29,6 +29,11 @@ export const editImageWithGemini = async (
           },
         ],
       },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
     });
 
     const parts = response.candidates?.[0]?.content?.parts;
@@ -54,6 +59,10 @@ export const editImageWithGemini = async (
  * Richiede uno sfondo nero puro per simulare la trasparenza in UI.
  */
 export const generateIconImage = async (prompt: string, brandColor: string): Promise<string> => {
+  if (!process.env.API_KEY || process.env.API_KEY === 'undefined') {
+    throw new Error("API_KEY non configurata nei Secrets di GitHub.");
+  }
+
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
@@ -62,14 +71,19 @@ export const generateIconImage = async (prompt: string, brandColor: string): Pro
       contents: {
         parts: [
           {
-            text: `Crea un'icona logo professionale, pulita e minimalista. 
-                   Soggetto: ${prompt}. 
-                   Schema Colore: utilizza esclusivamente il colore ${brandColor} (e sue sfumature) per i dettagli.
-                   IMPORTANTE: Lo sfondo deve essere RIGOROSAMENTE NERO PURO (#000000). 
-                   Stile: Flat design con neon glow, alta risoluzione, centrato, senza cornici.`
+            text: `Professional app icon, minimalist and clean. 
+                   Subject: ${prompt}. 
+                   Primary Color: ${brandColor}. 
+                   Background: PURE BLACK (#000000). 
+                   Style: Flat vector with elegant neon glow, centered, 2D style.`
           }
         ]
       },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
     });
 
     const parts = response.candidates?.[0]?.content?.parts;
@@ -82,7 +96,8 @@ export const generateIconImage = async (prompt: string, brandColor: string): Pro
     }
     throw new Error("Impossibile generare l'icona.");
   } catch (error: any) {
-    throw new Error(error.message || "Errore generazione icona AI.");
+    console.error("Errore generazione icona AI:", error);
+    throw error;
   }
 };
 
@@ -97,16 +112,10 @@ export const generateBrandIdentity = async (description: string): Promise<BrandI
 
   try {
     const prompt = `
-      Sei un esperto di Brand Identity per un creatore di app chiamato "Sek + Comix".
-      L'utente sta creando una nuova app specifica e ha fornito questa descrizione: "${description}".
-      
-      Devi scegliere l'icona più adatta tra questa lista limitata (keys):
-      ['palette', 'utensils', 'camera', 'heart', 'code', 'music', 'dumbbell', 'briefcase', 'plane', 'gamepad', 'shopping-cart', 'book', 'car', 'home', 'leaf'].
-      
-      Se nessuna si adatta perfettamente, usa 'palette'.
-      Devi anche scegliere un colore HEX "Neon" adatto.
-      Devi generare un breve SOTTOTITOLO in maiuscolo (max 15 caratteri).
-      Rispondi ESCLUSIVAMENTE con un oggetto JSON.
+      Expert Brand Identity analysis.
+      User app description: "${description}".
+      Icon options: ['palette', 'utensils', 'camera', 'heart', 'code', 'music', 'dumbbell', 'briefcase', 'plane', 'gamepad', 'shopping-cart', 'book', 'car', 'home', 'leaf'].
+      Return JSON with iconKey, colorHex (neon style) and subtitle (max 15 char).
     `;
 
     const response = await ai.models.generateContent({
@@ -121,15 +130,12 @@ export const generateBrandIdentity = async (description: string): Promise<BrandI
             colorHex: { type: Type.STRING },
             subtitle: { type: Type.STRING }
           },
-          required: ["iconKey", "colorHex", "subtitle"],
-          propertyOrdering: ["iconKey", "colorHex", "subtitle"]
+          required: ["iconKey", "colorHex", "subtitle"]
         }
       }
     });
 
-    const text = response.text;
-    if (!text) throw new Error("Risposta vuota dall'AI");
-    return JSON.parse(text) as BrandIdentityResult;
+    return JSON.parse(response.text) as BrandIdentityResult;
   } catch (error) {
     console.error("Errore generazione Brand Identity:", error);
     return { iconKey: 'palette', colorHex: '#00f260', subtitle: 'STUDIO' };
