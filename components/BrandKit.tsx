@@ -130,7 +130,9 @@ export const BrandKit: React.FC = () => {
   }, []);
 
   const applyPreset = (presetId: string) => {
-    // Cerca tra i preset di default
+    // Quando cambio categoria, resetto sempre lo sticker per evitare che resti "orfano"
+    setSelectedSticker(null);
+
     const preset = PRESET_CATEGORIES.find(p => p.id === presetId);
     if (preset) {
       setCurrentIdentity({
@@ -140,11 +142,9 @@ export const BrandKit: React.FC = () => {
       });
       setCustomImageSrc(null);
       setShowIcon(true);
-      setSelectedSticker(null);
       return;
     }
 
-    // Cerca tra le categorie caricate/personalizzate
     const custom = customCategories.find(c => c.id === presetId);
     if (custom) {
       setCurrentIdentity({
@@ -154,14 +154,13 @@ export const BrandKit: React.FC = () => {
       });
       setCustomImageSrc(custom.customImage || null);
       setShowIcon(true);
-      setSelectedSticker(null);
     }
   };
 
   const saveCurrentAsCategory = () => {
     const newCat: CustomCategory = {
       id: `custom_${Date.now()}`,
-      name: currentIdentity.subtitle || 'PROGETTO',
+      name: currentIdentity.subtitle || 'PROGETTO AI',
       iconKey: currentIdentity.iconKey,
       color: currentIdentity.colorHex,
       subtitle: currentIdentity.subtitle,
@@ -170,13 +169,15 @@ export const BrandKit: React.FC = () => {
     const updated = [newCat, ...customCategories];
     setCustomCategories(updated);
     localStorage.setItem('sek_studio_custom_cats_v7', JSON.stringify(updated));
-    alert('Progetto salvato con successo nell\'elenco Categorie!');
+    alert('Categoria salvata con successo! Ora la trovi nel menu a tendina.');
   };
 
   const deleteCategory = (id: string) => {
-    const updated = customCategories.filter(c => c.id !== id);
-    setCustomCategories(updated);
-    localStorage.setItem('sek_studio_custom_cats_v7', JSON.stringify(updated));
+    if (confirm('Vuoi davvero eliminare questa categoria personalizzata?')) {
+      const updated = customCategories.filter(c => c.id !== id);
+      setCustomCategories(updated);
+      localStorage.setItem('sek_studio_custom_cats_v7', JSON.stringify(updated));
+    }
   };
 
   const handleIconGenerate = async () => {
@@ -186,7 +187,7 @@ export const BrandKit: React.FC = () => {
       const img = await generateIconImage(iconPrompt);
       setCustomImageSrc(img);
       setShowIcon(true);
-      setSelectedSticker(null);
+      setSelectedSticker(null); // Pulisco sticker quando genero nuova icona
     } catch (e) { console.error(e); }
     finally { setIsGeneratingIcon(false); }
   };
@@ -198,8 +199,17 @@ export const BrandKit: React.FC = () => {
     setTimeout(() => setDownloadStatus('idle'), 2000);
   };
 
-  const currentHeight = Math.round(pixelSize * (500 / 1200));
-  const dynamicPreviewScale = activeTab === 'editor' ? (pixelSize / 1200) : 1;
+  // CHIRURGIA: Mappatura scala visiva per evitare overflow in XL (4000px)
+  // Invece di pixelSize / 1200, usiamo una crescita controllata per la preview
+  const getVisualScale = () => {
+    if (activeTab !== 'editor') return 1;
+    if (pixelSize <= 800) return 0.75;
+    if (pixelSize <= 1200) return 1.0;
+    if (pixelSize <= 2400) return 1.25;
+    return 1.45; // Massimo 1.45x per la XL, così lo sticker a -120px resta nel box
+  };
+
+  const dynamicPreviewScale = getVisualScale();
 
   const SidebarHeader = ({ title, icon: Icon, section }: { title: string, icon: any, section: SubSection }) => (
     <button 
@@ -371,18 +381,18 @@ export const BrandKit: React.FC = () => {
           {activeTab === 'editor' && (
             <div className="space-y-3 animate-fade-in">
               
-              {/* SEZIONE 1: IDENTITÀ & PRESET (Con Categorie Default + Custom) */}
+              {/* SEZIONE 1: IDENTITÀ & PRESET */}
               <div className="flex flex-col gap-2">
                 <SidebarHeader title="Identità & Preset" icon={Fingerprint} section="identity" />
                 {activeSubSection === 'identity' && (
                   <div className="bg-[#1a1638] p-5 rounded-2xl border border-white/10 space-y-5 animate-slide-up">
                     <div className="space-y-2">
-                      <label className="text-[9px] text-gray-500 uppercase font-black">Scegli Categoria (Default + Salva AI)</label>
+                      <label className="text-[9px] text-gray-500 uppercase font-black">Seleziona Categoria (Default + Salva AI)</label>
                       <select 
                         onChange={(e) => applyPreset(e.target.value)}
                         className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none hover:border-brand-accent/30 transition-all cursor-pointer"
                       >
-                        <option value="">Seleziona...</option>
+                        <option value="">Scegli...</option>
                         <optgroup label="Default Studio" className="bg-black/60">
                            {PRESET_CATEGORIES.map(p => <option key={p.id} value={p.id} className="bg-[#1a1638] text-white">{p.label}</option>)}
                         </optgroup>
@@ -533,7 +543,7 @@ export const BrandKit: React.FC = () => {
                 onClick={saveCurrentAsCategory} 
                 className="w-full py-4 mt-4 bg-brand-accent/10 border border-brand-accent/30 text-brand-accent rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent/20 transition-all shadow-xl active:scale-95"
               >
-                <FolderPlus size={16}/> Salva nelle Categorie (AI)
+                <FolderPlus size={16}/> Salva Lavoro Corrente (AI)
               </button>
             </div>
           )}
@@ -569,7 +579,7 @@ export const BrandKit: React.FC = () => {
           
           {activeTab === 'saved' && (
             <div className="bg-[#1a1638] p-6 rounded-3xl border border-white/10 shadow-2xl min-h-[500px] animate-fade-in">
-                <h3 className="font-black text-[10px] text-purple-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Folder size={16}/> I Tuoi Progetti Salvati</h3>
+                <h3 className="font-black text-[10px] text-purple-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Folder size={16}/> Archivio Progetti</h3>
                 <div className="grid grid-cols-1 gap-3">
                   {customCategories.length === 0 ? (
                     <div className="text-center py-20 opacity-30 italic text-xs uppercase font-black">Nessun progetto salvato</div>
