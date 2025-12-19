@@ -53,7 +53,6 @@ const STICKER_LIST = [
   { id: 'rocket', icon: <Rocket size={16} /> },
 ];
 
-const SEPARATOR_OPTIONS = ['+', '&', 'AND', 'and', 'E', 'e', 'with', 'x', 'vs', '•'];
 const FONT_OPTIONS = [
   { id: 'orbitron', label: 'Orbitron (Tech)', family: '"Orbitron", sans-serif' },
   { id: 'anton', label: 'Anton (Impact)', family: '"Anton", sans-serif' },
@@ -81,7 +80,12 @@ interface CustomCategory {
 
 type SubSection = 'identity' | 'ai' | 'stickers' | 'style';
 
-export const BrandKit: React.FC = () => {
+interface BrandKitProps {
+  globalState: any;
+  setGlobalState: React.Dispatch<React.SetStateAction<any>>;
+}
+
+export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'showroom' | 'saved'>('editor');
   const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
   const [showroomType, setShowroomType] = useState<'neon' | 'totem' | 'card'>('neon');
@@ -91,8 +95,6 @@ export const BrandKit: React.FC = () => {
   
   const [iconPrompt, setIconPrompt] = useState('');
   const [isGeneratingIcon, setIsGeneratingIcon] = useState(false);
-  const [brandName1, setBrandName1] = useState('SEK');
-  const [brandName2, setBrandName2] = useState('COMIX');
   
   const [showSeparator, setShowSeparator] = useState(true);
   const [showIcon, setShowIcon] = useState(true);
@@ -101,28 +103,9 @@ export const BrandKit: React.FC = () => {
   const [stickerPos, setStickerPos] = useState({ x: -120, y: -40, scale: 2.0 });
   
   const [currentSeparator, setCurrentSeparator] = useState('+');
-  const [selectedFont, setSelectedFont] = useState<any>('orbitron');
   const [pixelSize, setPixelSize] = useState(1200);
-  const [iconScale, setIconScale] = useState(1);
-  const [downloadSize, setDownloadSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('md');
+  const [logoSize, setLogoSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('md');
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
-  
-  const [customImageSrc, setCustomImageSrc] = useState<string | null>(null);
-  const [currentIdentity, setCurrentIdentity] = useState<BrandIdentityResult>({
-    iconKey: 'palette',
-    colorHex: '#00f260',
-    subtitle: 'STUDIO'
-  });
-
-  const setSizePreset = (size: 'sm' | 'md' | 'lg' | 'xl') => {
-    setDownloadSize(size);
-    const mapping = { sm: 800, md: 1200, lg: 2400, xl: 4000 };
-    setPixelSize(mapping[size]);
-  };
-
-  const handleRangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPixelSize(parseInt(e.target.value, 10));
-  };
 
   useEffect(() => {
     const stored = localStorage.getItem('sek_studio_custom_cats_v7');
@@ -131,48 +114,44 @@ export const BrandKit: React.FC = () => {
 
   const applyPreset = (presetId: string) => {
     setSelectedSticker(null);
-
     const preset = PRESET_CATEGORIES.find(p => p.id === presetId);
     if (preset) {
-      setCurrentIdentity({
-        iconKey: preset.iconKey,
-        colorHex: preset.color,
-        subtitle: preset.sub
-      });
-      setCustomImageSrc(null);
+      setGlobalState((prev: any) => ({ ...prev, iconKey: preset.iconKey, color: preset.color, subtitle: preset.sub, customImage: null }));
       setShowIcon(true);
       return;
     }
-
     const custom = customCategories.find(c => c.id === presetId);
     if (custom) {
-      setCurrentIdentity({
-        iconKey: custom.iconKey,
-        colorHex: custom.color,
-        subtitle: custom.subtitle
-      });
-      setCustomImageSrc(custom.customImage || null);
+      setGlobalState((prev: any) => ({ ...prev, iconKey: custom.iconKey, color: custom.color, subtitle: custom.subtitle, customImage: custom.customImage || null }));
       setShowIcon(true);
     }
   };
 
+  // Funzione di Sincronizzazione Dimensioni
+  const syncSize = (size: 'sm' | 'md' | 'lg' | 'xl') => {
+    setLogoSize(size);
+    const pixelMap = { sm: 600, md: 1200, lg: 2400, xl: 3600 };
+    setPixelSize(pixelMap[size]);
+  };
+
+  const handlePixelChange = (val: number) => {
+    setPixelSize(val);
+    if (val < 900) setLogoSize('sm');
+    else if (val < 1800) setLogoSize('md');
+    else if (val < 3000) setLogoSize('lg');
+    else setLogoSize('xl');
+  };
+
   const saveCurrentAsCategory = () => {
-    const newCat: CustomCategory = {
-      id: `custom_${Date.now()}`,
-      name: currentIdentity.subtitle || 'PROGETTO AI',
-      iconKey: currentIdentity.iconKey,
-      color: currentIdentity.colorHex,
-      subtitle: currentIdentity.subtitle,
-      customImage: customImageSrc
-    };
+    const newCat: CustomCategory = { id: `custom_${Date.now()}`, name: globalState.subtitle || 'PROGETTO AI', iconKey: globalState.iconKey, color: globalState.color, subtitle: globalState.subtitle, customImage: globalState.customImage };
     const updated = [newCat, ...customCategories];
     setCustomCategories(updated);
     localStorage.setItem('sek_studio_custom_cats_v7', JSON.stringify(updated));
-    alert('Categoria salvata correttamente nel menu "Identità & Preset"!');
+    alert('Salvato nell\'Archivio!');
   };
 
   const deleteCategory = (id: string) => {
-    if (confirm('Vuoi davvero eliminare questa categoria personalizzata?')) {
+    if (confirm('Eliminare definitivamente?')) {
       const updated = customCategories.filter(c => c.id !== id);
       setCustomCategories(updated);
       localStorage.setItem('sek_studio_custom_cats_v7', JSON.stringify(updated));
@@ -183,22 +162,11 @@ export const BrandKit: React.FC = () => {
     if (!iconPrompt.trim()) return;
     setIsGeneratingIcon(true);
     try {
-      // Passiamo il colore corrente dell'identità alla funzione di generazione
-      const img = await generateIconImage(iconPrompt, currentIdentity.colorHex);
-      setCustomImageSrc(img);
-      setShowIcon(true);
-      setSelectedSticker(null);
-      
+      const img = await generateIconImage(iconPrompt, globalState.color);
       const words = iconPrompt.trim().split(/\s+/);
-      const derivedSub = words.length > 1 
-        ? (words[0] + " " + words[1]).toUpperCase() 
-        : words[0].toUpperCase();
-      
-      setCurrentIdentity(prev => ({
-        ...prev,
-        subtitle: derivedSub.substring(0, 15)
-      }));
-
+      const derivedSub = words.length > 1 ? (words[0] + " " + words[1]).toUpperCase() : words[0].toUpperCase();
+      setGlobalState((prev: any) => ({ ...prev, customImage: img, subtitle: derivedSub.substring(0, 15) }));
+      setShowIcon(true);
     } catch (e) { console.error(e); }
     finally { setIsGeneratingIcon(false); }
   };
@@ -213,12 +181,10 @@ export const BrandKit: React.FC = () => {
   const getVisualScale = () => {
     if (activeTab !== 'editor') return 1;
     if (pixelSize <= 800) return 0.75;
-    if (pixelSize <= 1200) return 1.0;
-    if (pixelSize <= 2400) return 1.25;
+    if (pixelSize <= 1600) return 1.0;
+    if (pixelSize <= 2800) return 1.25;
     return 1.45;
   };
-
-  const dynamicPreviewScale = getVisualScale();
 
   const SidebarHeader = ({ title, icon: Icon, section }: { title: string, icon: any, section: SubSection }) => (
     <button 
@@ -237,140 +203,55 @@ export const BrandKit: React.FC = () => {
     <div className="w-full max-w-6xl mx-auto px-2 md:px-4 mt-8 pb-32">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* AREA PREVIEW DINAMICA */}
+        {/* AREA PREVIEW */}
         <div className="lg:col-span-8 lg:order-2 space-y-4">
           <div className={`relative w-full aspect-[12/6] md:aspect-[12-5] rounded-[2.5rem] overflow-hidden shadow-2xl flex items-center justify-center border-2 border-white/5 transition-all duration-700 ${activeTab === 'showroom' ? 'bg-black' : ''}`}
             style={{ backgroundColor: activeTab !== 'showroom' ? previewBg : undefined }}>
             
-            {activeTab === 'showroom' ? (
-               <div className="w-full h-full flex items-center justify-center p-8 overflow-hidden transition-all duration-500">
-                  {showroomType === 'neon' && (
-                    <div className="relative animate-pulse flex items-center justify-center scale-50 md:scale-75 lg:scale-100">
-                       <div className="absolute inset-0 blur-[120px] opacity-40 scale-150" style={{ background: currentIdentity.colorHex }}></div>
-                       <BrandLogo 
-                          size="xl" 
-                          customIcon={BASE_ICONS[currentIdentity.iconKey]?.component} 
-                          customImageSrc={customImageSrc}
-                          customColor={currentIdentity.colorHex} 
-                          subtitle={currentIdentity.subtitle} 
-                          showSubtitle={showSubtitle}
-                          text1={brandName1} text2={brandName2} 
-                          showSeparator={showSeparator} showIcon={showIcon}
-                          font={selectedFont} separatorText={currentSeparator}
-                          theme="dark" iconScale={iconScale} sticker={selectedSticker}
-                          stickerConfig={stickerPos}
-                          className="drop-shadow-[0_0_35px_rgba(255,255,255,0.4)]"
-                       />
-                    </div>
-                  )}
-                  {showroomType === 'card' && (
-                    <div className="w-[450px] aspect-[1.6/1] bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-2xl border border-white/20 rounded-[2rem] shadow-2xl flex items-center justify-center relative overflow-hidden group scale-90 md:scale-100 transition-transform">
-                       <div className="absolute -top-20 -left-20 w-40 h-40 bg-brand-accent/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000"></div>
-                       <BrandLogo 
-                          size="md" 
-                          customIcon={BASE_ICONS[currentIdentity.iconKey]?.component} 
-                          customImageSrc={customImageSrc}
-                          customColor={currentIdentity.colorHex} 
-                          subtitle={currentIdentity.subtitle} 
-                          showSubtitle={showSubtitle}
-                          text1={brandName1} text2={brandName2} 
-                          showSeparator={showSeparator} showIcon={showIcon}
-                          font={selectedFont} separatorText={currentSeparator}
-                          theme="dark" iconScale={iconScale} sticker={selectedSticker}
-                          stickerConfig={stickerPos}
-                       />
-                    </div>
-                  )}
-                  {showroomType === 'totem' && (
-                    <div className="h-full aspect-[9/16] bg-[#111] border-x border-white/10 flex flex-col items-center justify-center gap-12 p-12 transition-all">
-                       <div className="w-full h-1 bg-gradient-to-r from-transparent via-brand-accent to-transparent opacity-30 shadow-[0_0_15px_rgba(0,242,96,0.3)]"></div>
-                       <BrandLogo 
-                          size="lg" 
-                          customIcon={BASE_ICONS[currentIdentity.iconKey]?.component} 
-                          customImageSrc={customImageSrc}
-                          customColor={currentIdentity.colorHex} 
-                          subtitle={currentIdentity.subtitle} 
-                          showSubtitle={showSubtitle}
-                          text1={brandName1} text2={brandName2} 
-                          showSeparator={showSeparator} showIcon={showIcon}
-                          font={selectedFont} separatorText={currentSeparator}
-                          theme="dark" iconScale={iconScale} sticker={selectedSticker}
-                          stickerConfig={stickerPos}
-                       />
-                       <div className="w-full h-1 bg-gradient-to-r from-transparent via-brand-accent to-transparent opacity-30 shadow-[0_0_15px_rgba(0,242,96,0.3)]"></div>
-                    </div>
-                  )}
-               </div>
-            ) : (
-              <div 
-                className="transition-transform duration-150 ease-out flex items-center justify-center" 
-                style={{ transform: `scale(${dynamicPreviewScale})` }}
-              >
+            <div className="transition-all duration-300 flex items-center justify-center" style={{ transform: `scale(${getVisualScale()})` }}>
                 <BrandLogo 
-                  size="md" 
-                  customIcon={BASE_ICONS[currentIdentity.iconKey]?.component} 
-                  customImageSrc={customImageSrc}
-                  customColor={currentIdentity.colorHex} 
-                  subtitle={currentIdentity.subtitle} 
+                  size={logoSize} 
+                  customIcon={BASE_ICONS[globalState.iconKey]?.component} 
+                  customImageSrc={globalState.customImage}
+                  customColor={globalState.color} 
+                  subtitle={globalState.subtitle} 
                   showSubtitle={showSubtitle}
-                  text1={brandName1} 
-                  text2={brandName2} 
+                  text1={globalState.text1} 
+                  text2={globalState.text2} 
                   showSeparator={showSeparator} 
                   showIcon={showIcon}
-                  font={selectedFont} 
+                  font={globalState.font} 
                   separatorText={currentSeparator} 
                   theme={logoTheme} 
-                  iconScale={iconScale} 
+                  iconScale={globalState.iconScale} 
                   sticker={selectedSticker}
                   stickerConfig={stickerPos}
                 />
-              </div>
-            )}
+            </div>
 
             {activeTab === 'editor' && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-0 bg-black/60 backdrop-blur-3xl p-1 rounded-full border border-white/10 opacity-90 hover:opacity-100 transition-all z-30 shadow-2xl overflow-hidden">
-                
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-0 bg-black/60 backdrop-blur-3xl p-1 rounded-full border border-white/10 opacity-90 hover:opacity-100 transition-all z-30 shadow-2xl">
                 <div className="flex gap-1.5 px-4 border-r border-white/10 py-2">
                   {BG_PRESETS.map(bg => (
-                    <button 
-                      key={bg.hex} 
-                      onClick={() => {setPreviewBg(bg.hex); setLogoTheme(bg.theme as any)}} 
-                      className={`w-4 h-4 rounded-full border transition-all ${previewBg === bg.hex ? 'border-brand-accent ring-2 ring-brand-accent/20 scale-110' : 'border-white/20 opacity-50 hover:opacity-100'}`} 
-                      style={{ backgroundColor: bg.hex }} 
-                    />
+                    <button key={bg.hex} onClick={() => {setPreviewBg(bg.hex); setLogoTheme(bg.theme as any)}} className={`w-4 h-4 rounded-full border transition-all ${previewBg === bg.hex ? 'border-brand-accent ring-2 ring-brand-accent/20 scale-110' : 'border-white/20 opacity-50 hover:opacity-100'}`} style={{ backgroundColor: bg.hex }} />
+                  ))}
+                </div>
+                
+                <div className="flex gap-1 px-4 border-r border-white/10 py-2">
+                  {(['sm', 'md', 'lg', 'xl'] as const).map(s => (
+                    <button key={s} onClick={() => syncSize(s)} className={`px-2 py-1 rounded-md text-[8px] font-black uppercase transition-all ${logoSize === s ? 'bg-brand-accent text-black' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>{s}</button>
                   ))}
                 </div>
 
-                <div className="flex items-center gap-3 px-5 py-2">
+                <div className="flex items-center gap-4 px-5 py-2">
                    <div className="flex flex-col items-center">
                       <span className="text-[6px] font-black text-white/30 uppercase tracking-widest leading-none mb-0.5">Larghezza</span>
                       <span className="text-[8px] font-mono font-bold text-brand-accent leading-none">{pixelSize}px</span>
                    </div>
-                   <input 
-                    type="range" 
-                    min="400" max="4000" step="10" 
-                    value={pixelSize} 
-                    onChange={handleRangeChange} 
-                    className="w-20 md:w-32 h-1 accent-brand-accent bg-white/10 rounded-full appearance-none cursor-pointer" 
-                  />
+                   <input type="range" min="400" max="4000" step="10" value={pixelSize} onChange={(e) => handlePixelChange(parseInt(e.target.value))} className="w-20 md:w-32 h-1 accent-brand-accent bg-white/10 rounded-full appearance-none cursor-pointer" />
                 </div>
 
-                <div className="flex gap-1 px-4 border-l border-white/10 py-1">
-                   {['sm', 'md', 'lg', 'xl'].map((s: any) => 
-                    <button 
-                      key={s} 
-                      onClick={() => setSizePreset(s as any)} 
-                      className={`w-7 h-7 rounded-full text-[7px] font-black transition-all flex items-center justify-center ${downloadSize === s ? 'bg-brand-accent text-black shadow-lg' : 'bg-transparent text-gray-500 hover:text-white hover:bg-white/5'}`}
-                    >
-                      {s.toUpperCase()}
-                    </button>
-                   )}
-                </div>
-                
-                <button 
-                  onClick={downloadLogo}
-                  className="mr-1 w-8 h-8 flex items-center justify-center bg-brand-accent/20 text-brand-accent rounded-full hover:bg-brand-accent hover:text-black transition-all"
-                >
+                <button onClick={downloadLogo} className="mr-1 w-8 h-8 flex items-center justify-center bg-brand-accent text-black rounded-full hover:scale-110 transition-all shadow-lg">
                   <Download size={12}/>
                 </button>
               </div>
@@ -384,73 +265,46 @@ export const BrandKit: React.FC = () => {
           </div>
         </div>
 
-        {/* SIDEBAR EDITOR CON ACCORDION */}
+        {/* SIDEBAR */}
         <div className="lg:col-span-4 lg:order-1 space-y-3 overflow-y-auto max-h-[850px] pr-2 no-scrollbar">
           {activeTab === 'editor' && (
             <div className="space-y-3 animate-fade-in">
-              
-              {/* SEZIONE 1: IDENTITÀ & PRESET */}
               <div className="flex flex-col gap-2">
                 <SidebarHeader title="Identità & Preset" icon={Fingerprint} section="identity" />
                 {activeSubSection === 'identity' && (
                   <div className="bg-[#1a1638] p-5 rounded-2xl border border-white/10 space-y-5 animate-slide-up">
                     <div className="space-y-2">
-                      <label className="text-[9px] text-gray-500 uppercase font-black">Seleziona Categoria (Default + Salva AI)</label>
-                      <select 
-                        onChange={(e) => applyPreset(e.target.value)}
-                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none hover:border-brand-accent/30 transition-all cursor-pointer"
-                      >
-                        <option value="">Scegli...</option>
-                        <optgroup label="Default Studio" className="bg-black/60">
-                           {PRESET_CATEGORIES.map(p => <option key={p.id} value={p.id} className="bg-[#1a1638] text-white">{p.label}</option>)}
+                      <label className="text-[9px] text-gray-500 uppercase font-black">Categoria & Progetti</label>
+                      <select onChange={(e) => applyPreset(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none cursor-pointer">
+                        <option value="">Seleziona Preset...</option>
+                        <optgroup label="Default" className="bg-black">
+                          {PRESET_CATEGORIES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                         </optgroup>
                         {customCategories.length > 0 && (
-                          <optgroup label="Le Tue Creazioni AI" className="bg-black/60">
-                             {customCategories.map(c => <option key={c.id} value={c.id} className="bg-[#1a1638] text-brand-accent">{c.name}</option>)}
+                          <optgroup label="Salvati" className="bg-black">
+                            {customCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                           </optgroup>
                         )}
                       </select>
                     </div>
-
-                    {customCategories.length > 0 && (
-                      <div className="space-y-2 pt-2">
-                        <label className="text-[8px] text-gray-400 uppercase font-black">Gestione Categorie Personali</label>
-                        <div className="max-h-32 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-                           {customCategories.map(cat => (
-                             <div key={cat.id} className="flex items-center justify-between p-2 bg-black/20 rounded-lg group">
-                                <span className="text-[10px] text-white font-bold truncate max-w-[150px]">{cat.name}</span>
-                                <div className="flex gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
-                                   <button onClick={() => applyPreset(cat.id)} className="text-brand-accent hover:scale-110"><Eye size={12}/></button>
-                                   <button onClick={() => deleteCategory(cat.id)} className="text-red-500 hover:scale-110"><Trash2 size={12}/></button>
-                                </div>
-                             </div>
-                           ))}
-                        </div>
-                      </div>
-                    )}
-
                     <div className="space-y-2">
                       <label className="text-[9px] text-gray-500 uppercase font-black">Testi Logo</label>
                       <div className="flex gap-2">
-                        <input type="text" value={brandName1} onChange={(e) => setBrandName1(e.target.value.toUpperCase())} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-sm outline-none focus:border-brand-accent transition-all" />
-                        <input type="text" value={brandName2} onChange={(e) => setBrandName2(e.target.value.toUpperCase())} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-sm outline-none focus:border-brand-accent transition-all" />
+                        <input type="text" value={globalState.text1} onChange={(e) => setGlobalState({...globalState, text1: e.target.value.toUpperCase()})} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-sm outline-none focus:border-brand-accent transition-all" />
+                        <input type="text" value={globalState.text2} onChange={(e) => setGlobalState({...globalState, text2: e.target.value.toUpperCase()})} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-sm outline-none focus:border-brand-accent transition-all" />
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <div className="flex justify-between items-center mb-1">
-                        <label className="text-[9px] text-gray-500 uppercase font-black">Sottotitolo Personalizzato</label>
-                        <button onClick={() => setShowSubtitle(!showSubtitle)} className={`text-[8px] font-black uppercase px-2 py-1 rounded-md transition-all ${showSubtitle ? 'bg-brand-accent/20 text-brand-accent' : 'bg-red-500/20 text-red-500'}`}>
-                          {showSubtitle ? 'ON' : 'OFF'}
-                        </button>
+                        <label className="text-[9px] text-gray-500 uppercase font-black">Sottotitolo</label>
+                        <button onClick={() => setShowSubtitle(!showSubtitle)} className={`text-[8px] font-black uppercase px-2 py-1 rounded-md transition-all ${showSubtitle ? 'bg-brand-accent/20 text-brand-accent' : 'bg-red-500/20 text-red-500'}`}>{showSubtitle ? 'ON' : 'OFF'}</button>
                       </div>
-                      <input type="text" value={currentIdentity.subtitle} onChange={(e) => setCurrentIdentity({...currentIdentity, subtitle: e.target.value.toUpperCase()})} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-xs text-brand-accent outline-none focus:border-brand-accent transition-all" />
+                      <input type="text" value={globalState.subtitle} onChange={(e) => setGlobalState({...globalState, subtitle: e.target.value.toUpperCase()})} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-xs text-brand-accent outline-none focus:border-brand-accent transition-all" />
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* SEZIONE 2: AI ICON STUDIO */}
               <div className="flex flex-col gap-2">
                 <SidebarHeader title="AI Icon Generator" icon={ImageIcon} section="ai" />
                 {activeSubSection === 'ai' && (
@@ -462,24 +316,17 @@ export const BrandKit: React.FC = () => {
                       </button>
                     </div>
                     <div className="space-y-2">
-                       <div className="flex justify-between text-[9px] font-black uppercase text-gray-400">
-                          <span>Scala Icona</span>
-                          <span className="text-brand-accent">{iconScale}x</span>
-                       </div>
-                       <input type="range" min="0.3" max="2.5" step="0.1" value={iconScale} onChange={(e) => setIconScale(parseFloat(e.target.value))} className="w-full h-1.5 accent-brand-accent bg-black/60 rounded-full appearance-none cursor-pointer" />
+                       <label className="text-[9px] text-gray-500 uppercase font-black">Scala Icona</label>
+                       <input type="range" min="0.3" max="2.5" step="0.1" value={globalState.iconScale} onChange={(e) => setGlobalState({...globalState, iconScale: parseFloat(e.target.value)})} className="w-full h-1.5 accent-brand-accent bg-black/60 rounded-full appearance-none cursor-pointer" />
                     </div>
-
-                    <button 
-                      onClick={saveCurrentAsCategory} 
-                      className="w-full py-4 mt-2 bg-brand-accent/10 border border-brand-accent/30 text-brand-accent rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent/20 transition-all shadow-xl active:scale-95"
-                    >
+                    <button onClick={saveCurrentAsCategory} className="w-full py-4 mt-2 bg-brand-accent/10 border border-brand-accent/30 text-brand-accent rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent/20 transition-all shadow-xl active:scale-95">
                       <FolderPlus size={16}/> Salva nelle Categorie
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* SEZIONE 3: EFFETTI STICKERS */}
+              {/* STICKERS */}
               <div className="flex flex-col gap-2">
                 <SidebarHeader title="Effetti Stickers" icon={Star} section="stickers" />
                 {activeSubSection === 'stickers' && (
@@ -490,7 +337,7 @@ export const BrandKit: React.FC = () => {
                           <button key={stk.id} onClick={() => setSelectedSticker(stk.id)} className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all ${selectedSticker === stk.id ? 'border-brand-accent bg-brand-accent/20 text-brand-accent scale-110 shadow-lg' : 'border-white/5 bg-black/20 text-gray-500 hover:text-white'}`}>{stk.icon}</button>
                         ))}
                       </div>
-                      {selectedSticker && <button onClick={() => setSelectedSticker(null)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-all" title="Elimina Sticker"><Trash2 size={16}/></button>}
+                      {selectedSticker && <button onClick={() => setSelectedSticker(null)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-all"><Trash2 size={16}/></button>}
                     </div>
 
                     {selectedSticker && (
@@ -504,7 +351,7 @@ export const BrandKit: React.FC = () => {
                            <input type="range" min="-150" max="150" value={stickerPos.y} onChange={(e) => setStickerPos({...stickerPos, y: parseInt(e.target.value)})} className="w-full h-1 accent-yellow-400 bg-black/40 rounded-lg appearance-none cursor-pointer" />
                         </div>
                         <div className="space-y-2">
-                           <div className="flex justify-between text-[8px] font-black uppercase text-gray-500"><span>Dimensione</span><span className="text-yellow-400">{Math.round(stickerPos.scale * 100)}%</span></div>
+                           <div className="flex justify-between text-[8px] font-black uppercase text-gray-500"><span>Scala</span><span className="text-yellow-400">{Math.round(stickerPos.scale * 100)}%</span></div>
                            <input type="range" min="0.5" max="4.5" step="0.1" value={stickerPos.scale} onChange={(e) => setStickerPos({...stickerPos, scale: parseFloat(e.target.value)})} className="w-full h-1 accent-yellow-400 bg-black/40 rounded-lg appearance-none cursor-pointer" />
                         </div>
                       </div>
@@ -513,103 +360,43 @@ export const BrandKit: React.FC = () => {
                 )}
               </div>
 
-              {/* SEZIONE 4: DESIGN & STILE */}
               <div className="flex flex-col gap-2">
                 <SidebarHeader title="Design & Stile" icon={Settings2} section="style" />
                 {activeSubSection === 'style' && (
                   <div className="bg-[#1a1638] p-5 rounded-2xl border border-white/10 space-y-5 animate-slide-up">
-                    <div className="flex justify-between items-center">
-                       <label className="text-[9px] text-gray-500 uppercase font-black">Interruttori UI</label>
-                       <div className="flex gap-2">
-                          <button onClick={() => setShowIcon(!showIcon)} className={`p-2 rounded-lg transition-all ${showIcon ? 'bg-brand-accent/20 text-brand-accent' : 'bg-black/40 text-gray-600'}`} title="Mostra Icona"><ImageIcon size={14}/></button>
-                          <button onClick={() => setShowSeparator(!showSeparator)} className={`p-2 rounded-lg transition-all ${showSeparator ? 'bg-brand-accent/20 text-brand-accent' : 'bg-black/40 text-gray-600'}`} title="Mostra Separatore"><Eye size={14}/></button>
-                       </div>
-                    </div>
-
                     <div className="space-y-2">
-                      <label className="text-[9px] text-gray-500 uppercase font-black">Carattere Brand</label>
-                      <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none cursor-pointer">
+                      <select value={globalState.font} onChange={(e) => setGlobalState({...globalState, font: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none cursor-pointer">
                         {FONT_OPTIONS.map(f => <option key={f.id} value={f.id} className="bg-[#1a1638] text-white">{f.label}</option>)}
                       </select>
                     </div>
-
-                    {showSeparator && (
-                      <div className="space-y-2">
-                        <label className="text-[9px] text-gray-500 uppercase font-black">Simbolo Separatore</label>
-                        <select value={currentSeparator} onChange={(e) => setCurrentSeparator(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-black text-brand-accent outline-none cursor-pointer">
-                          {SEPARATOR_OPTIONS.map(opt => <option key={opt} value={opt} className="bg-[#1a1638] text-brand-accent">{opt}</option>)}
-                        </select>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <label className="text-[9px] text-gray-500 uppercase font-black">Colore Neon Primario</label>
-                      <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                        {NEON_COLORS.map(color => (
-                          <button key={color} onClick={() => setCurrentIdentity({...currentIdentity, colorHex: color})} className={`shrink-0 w-6 h-6 rounded-full border-2 transition-all ${currentIdentity.colorHex === color ? 'border-white scale-110 ring-2 ring-white/20' : 'border-transparent opacity-60'}`} style={{ backgroundColor: color }} />
-                        ))}
-                      </div>
+                    <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                      {NEON_COLORS.map(color => (
+                        <button key={color} onClick={() => setGlobalState({...globalState, color: color})} className={`shrink-0 w-6 h-6 rounded-full border-2 transition-all ${globalState.color === color ? 'border-white scale-110' : 'border-transparent opacity-60'}`} style={{ backgroundColor: color }} />
+                      ))}
                     </div>
                   </div>
                 )}
               </div>
             </div>
           )}
-
-          {activeTab === 'showroom' && (
-            <div className="bg-[#1a1638] p-6 rounded-3xl border border-white/10 shadow-2xl space-y-4 animate-fade-in">
-              <h3 className="text-[10px] font-black text-brand-accent uppercase tracking-widest flex items-center gap-2"><Layout size={16}/> Vetrina Espositiva</h3>
-              <div className="grid grid-cols-1 gap-3">
-                <button onClick={() => setShowroomType('neon')} className={`p-5 rounded-2xl border text-left flex items-center justify-between transition-all ${showroomType === 'neon' ? 'bg-brand-accent/20 border-brand-accent text-brand-accent shadow-lg shadow-brand-accent/10' : 'bg-black/20 border-white/5 text-gray-400 hover:text-white hover:bg-black/40'}`}>
-                   <div>
-                     <span className="text-xs font-black uppercase tracking-widest block">Insegna Neon</span>
-                     <span className="text-[9px] opacity-60 uppercase">Effetto Glow Ambientale</span>
-                   </div>
-                   <Zap size={20}/>
-                </button>
-                <button onClick={() => setShowroomType('card')} className={`p-5 rounded-2xl border text-left flex items-center justify-between transition-all ${showroomType === 'card' ? 'bg-brand-accent2/20 border-brand-accent2 text-brand-accent2 shadow-lg shadow-brand-accent2/10' : 'bg-black/20 border-white/5 text-gray-400 hover:text-white hover:bg-black/40'}`}>
-                   <div>
-                     <span className="text-xs font-black uppercase tracking-widest block">Business Card</span>
-                     <span className="text-[9px] opacity-60 uppercase">Minimal Glassmorphism</span>
-                   </div>
-                   <Palette size={20}/>
-                </button>
-                <button onClick={() => setShowroomType('totem')} className={`p-5 rounded-2xl border text-left flex items-center justify-between transition-all ${showroomType === 'totem' ? 'bg-purple-600/20 border-purple-600 text-purple-600 shadow-lg shadow-purple-600/10' : 'bg-black/20 border-white/5 text-gray-400 hover:text-white hover:bg-black/40'}`}>
-                   <div>
-                     <span className="text-xs font-black uppercase tracking-widest block">Splash / Totem</span>
-                     <span className="text-[9px] opacity-60 uppercase">Layout Verticale Full</span>
-                   </div>
-                   <Layout size={20}/>
-                </button>
-              </div>
-            </div>
-          )}
           
           {activeTab === 'saved' && (
             <div className="bg-[#1a1638] p-6 rounded-3xl border border-white/10 shadow-2xl min-h-[500px] animate-fade-in">
-                <h3 className="font-black text-[10px] text-purple-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Folder size={16}/> Archivio Progetti</h3>
+                <h3 className="font-black text-[10px] text-purple-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Folder size={16}/> Archivio</h3>
                 <div className="grid grid-cols-1 gap-3">
-                  {customCategories.length === 0 ? (
-                    <div className="text-center py-20 opacity-30 italic text-xs uppercase font-black">Nessun progetto salvato</div>
-                  ) : (
-                    customCategories.map(cat => (
-                      <div key={cat.id} className="group bg-black/40 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-brand-accent/30 hover:bg-black/60 transition-all shadow-md">
-                        <button onClick={() => {
-                          applyPreset(cat.id);
-                          setActiveTab('editor');
-                        }} className="flex items-center gap-4 text-left flex-1">
-                          <div className="p-2 bg-white/5 rounded-xl transition-all group-hover:scale-110" style={{ color: cat.color }}>
-                            {cat.customImage ? <img src={cat.customImage} className="w-10 h-10 rounded-lg object-cover shadow-lg border border-white/10" alt={cat.name} /> : React.cloneElement((BASE_ICONS[cat.iconKey] || BASE_ICONS['palette']).component as any, { size: 28 })}
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black text-white uppercase tracking-widest">{cat.name}</p>
-                            <p className="text-[8px] text-gray-500 font-bold uppercase tracking-tighter">{cat.subtitle}</p>
-                          </div>
-                        </button>
-                        <button onClick={() => deleteCategory(cat.id)} className="p-2 text-gray-600 hover:text-red-500 transition-all opacity-40 group-hover:opacity-100"><Trash2 size={20}/></button>
-                      </div>
-                    ))
-                  )}
+                  {customCategories.map(cat => (
+                    <div key={cat.id} className="group bg-black/40 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-brand-accent/30 transition-all">
+                      <button onClick={() => { applyPreset(cat.id); setActiveTab('editor'); }} className="flex items-center gap-4 text-left flex-1">
+                        <div className="p-2 bg-white/5 rounded-xl transition-all" style={{ color: cat.color }}>
+                          {cat.customImage ? <img src={cat.customImage} className="w-10 h-10 rounded-lg object-cover" /> : React.cloneElement((BASE_ICONS[cat.iconKey] || BASE_ICONS['palette']).component as any, { size: 28 })}
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-white uppercase">{cat.name}</p>
+                        </div>
+                      </button>
+                      <button onClick={() => deleteCategory(cat.id)} className="p-2 text-gray-600 hover:text-red-500 opacity-40 group-hover:opacity-100"><Trash2 size={20}/></button>
+                    </div>
+                  ))}
                 </div>
               </div>
           )}
