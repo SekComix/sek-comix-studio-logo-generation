@@ -6,7 +6,7 @@ import { BrandKit } from './components/BrandKit';
 import { Sparkles } from 'lucide-react';
 
 const App: React.FC = () => {
-  // Stato globale del Brand per sincronizzare Header e Editor
+  // Stato globale del Brand sincronizzato
   const [brandState, setBrandState] = useState({
     text1: 'SEK',
     text2: 'COMIX',
@@ -15,13 +15,17 @@ const App: React.FC = () => {
     iconKey: 'palette',
     customImage: null as string | null,
     font: 'orbitron' as any,
-    iconScale: 1
+    iconScale: 1,
+    showIcon: true,
+    showSeparator: true,
+    showSubtitle: true,
+    separatorText: '+'
   });
 
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-black overflow-x-hidden">
       
-      {/* Header dinamico che riflette le scelte dell'utente */}
+      {/* Header dinamico sincronizzato */}
       <header className="sticky top-0 z-50 bg-[#0f0c29]/90 backdrop-blur-lg border-b border-white/10 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
           <BrandLogo 
@@ -33,6 +37,10 @@ const App: React.FC = () => {
             customImageSrc={brandState.customImage}
             font={brandState.font}
             iconScale={brandState.iconScale * 0.8}
+            showIcon={brandState.showIcon}
+            showSeparator={brandState.showSeparator}
+            showSubtitle={brandState.showSubtitle}
+            separatorText={brandState.separatorText}
             className="scale-75 md:scale-90 origin-left" 
           />
           
@@ -62,7 +70,6 @@ const App: React.FC = () => {
 
           <ImageEditor />
           
-          {/* Passiamo stato e setter a BrandKit */}
           <BrandKit globalState={brandState} setGlobalState={setBrandState} />
         </div>
       </main>
