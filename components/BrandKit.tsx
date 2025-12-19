@@ -9,7 +9,7 @@ import {
   Utensils, Zap, Crown, FolderPlus, Folder,
   Rocket, Layout, Image as ImageIcon, X, Star, Flame, Move,
   Maximize2, Plane, Dumbbell, Book, Home, Car, Type as TypeIcon,
-  ChevronDown, ChevronRight, Settings2, Fingerprint
+  ChevronDown, ChevronRight, Settings2, Fingerprint, Monitor
 } from 'lucide-react';
 
 const BASE_ICONS: Record<string, { component: React.ReactNode, label: string }> = {
@@ -127,7 +127,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
     }
   };
 
-  // Funzione di Sincronizzazione Dimensioni
   const syncSize = (size: 'sm' | 'md' | 'lg' | 'xl') => {
     setLogoSize(size);
     const pixelMap = { sm: 600, md: 1200, lg: 2400, xl: 3600 };
@@ -208,9 +207,30 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
           <div className={`relative w-full aspect-[12/6] md:aspect-[12-5] rounded-[2.5rem] overflow-hidden shadow-2xl flex items-center justify-center border-2 border-white/5 transition-all duration-700 ${activeTab === 'showroom' ? 'bg-black' : ''}`}
             style={{ backgroundColor: activeTab !== 'showroom' ? previewBg : undefined }}>
             
-            <div className="transition-all duration-300 flex items-center justify-center" style={{ transform: `scale(${getVisualScale()})` }}>
+            {/* Pulsanti Showroom (Vetrina, Totem, Card) */}
+            {activeTab === 'showroom' && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-black/60 backdrop-blur-3xl p-1.5 rounded-full border border-white/10 z-30 shadow-2xl animate-fade-in">
+                <button onClick={() => setShowroomType('neon')} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${showroomType === 'neon' ? 'bg-brand-accent text-black' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>Vetrina</button>
+                <button onClick={() => setShowroomType('totem')} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${showroomType === 'totem' ? 'bg-brand-accent text-black' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>Totem</button>
+                <button onClick={() => setShowroomType('card')} className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${showroomType === 'card' ? 'bg-brand-accent text-black' : 'text-white/40 hover:text-white hover:bg-white/5'}`}>Card</button>
+              </div>
+            )}
+
+            <div className={`transition-all duration-500 flex items-center justify-center 
+                ${activeTab === 'showroom' && showroomType === 'totem' ? 'w-48 h-full bg-gradient-to-b from-gray-900 to-black border-x border-white/10' : ''}
+                ${activeTab === 'showroom' && showroomType === 'card' ? 'w-[400px] h-[220px] bg-[#1a1638] rounded-2xl border border-white/20 shadow-2xl relative overflow-hidden' : ''}
+              `} 
+              style={{ transform: activeTab === 'editor' ? `scale(${getVisualScale()})` : 'none' }}>
+                
+                {activeTab === 'showroom' && showroomType === 'card' && (
+                  <div className="absolute top-0 right-0 p-6 opacity-20">
+                    <Monitor size={80} style={{ color: globalState.color }} />
+                  </div>
+                )}
+
                 <BrandLogo 
-                  size={logoSize} 
+                  size={activeTab === 'showroom' ? (showroomType === 'totem' ? 'sm' : 'md') : logoSize} 
+                  className={activeTab === 'showroom' && showroomType === 'totem' ? 'rotate-[-90deg]' : ''}
                   customIcon={BASE_ICONS[globalState.iconKey]?.component} 
                   customImageSrc={globalState.customImage}
                   customColor={globalState.color} 
