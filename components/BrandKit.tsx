@@ -130,7 +130,6 @@ export const BrandKit: React.FC = () => {
   }, []);
 
   const applyPreset = (presetId: string) => {
-    // Quando cambio categoria, resetto sempre lo sticker per evitare che resti "orfano"
     setSelectedSticker(null);
 
     const preset = PRESET_CATEGORIES.find(p => p.id === presetId);
@@ -169,7 +168,7 @@ export const BrandKit: React.FC = () => {
     const updated = [newCat, ...customCategories];
     setCustomCategories(updated);
     localStorage.setItem('sek_studio_custom_cats_v7', JSON.stringify(updated));
-    alert('Categoria salvata con successo! Ora la trovi nel menu a tendina.');
+    alert('Categoria salvata correttamente nel menu "Identità & Preset"!');
   };
 
   const deleteCategory = (id: string) => {
@@ -187,7 +186,19 @@ export const BrandKit: React.FC = () => {
       const img = await generateIconImage(iconPrompt);
       setCustomImageSrc(img);
       setShowIcon(true);
-      setSelectedSticker(null); // Pulisco sticker quando genero nuova icona
+      setSelectedSticker(null);
+      
+      // CHIRURGIA: Aggiorniamo il sottotitolo basandoci sul prompt
+      const words = iconPrompt.trim().split(/\s+/);
+      const derivedSub = words.length > 1 
+        ? (words[0] + " " + words[1]).toUpperCase() 
+        : words[0].toUpperCase();
+      
+      setCurrentIdentity(prev => ({
+        ...prev,
+        subtitle: derivedSub.substring(0, 15)
+      }));
+
     } catch (e) { console.error(e); }
     finally { setIsGeneratingIcon(false); }
   };
@@ -199,14 +210,12 @@ export const BrandKit: React.FC = () => {
     setTimeout(() => setDownloadStatus('idle'), 2000);
   };
 
-  // CHIRURGIA: Mappatura scala visiva per evitare overflow in XL (4000px)
-  // Invece di pixelSize / 1200, usiamo una crescita controllata per la preview
   const getVisualScale = () => {
     if (activeTab !== 'editor') return 1;
     if (pixelSize <= 800) return 0.75;
     if (pixelSize <= 1200) return 1.0;
     if (pixelSize <= 2400) return 1.25;
-    return 1.45; // Massimo 1.45x per la XL, così lo sticker a -120px resta nel box
+    return 1.45;
   };
 
   const dynamicPreviewScale = getVisualScale();
@@ -318,7 +327,6 @@ export const BrandKit: React.FC = () => {
               </div>
             )}
 
-            {/* Barra di controllo float integrata */}
             {activeTab === 'editor' && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-0 bg-black/60 backdrop-blur-3xl p-1 rounded-full border border-white/10 opacity-90 hover:opacity-100 transition-all z-30 shadow-2xl overflow-hidden">
                 
@@ -460,6 +468,14 @@ export const BrandKit: React.FC = () => {
                        </div>
                        <input type="range" min="0.3" max="2.5" step="0.1" value={iconScale} onChange={(e) => setIconScale(parseFloat(e.target.value))} className="w-full h-1.5 accent-brand-accent bg-black/60 rounded-full appearance-none cursor-pointer" />
                     </div>
+
+                    {/* CHIRURGIA: Pulsante Salvataggio Spostato Qui */}
+                    <button 
+                      onClick={saveCurrentAsCategory} 
+                      className="w-full py-4 mt-2 bg-brand-accent/10 border border-brand-accent/30 text-brand-accent rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent/20 transition-all shadow-xl active:scale-95"
+                    >
+                      <FolderPlus size={16}/> Salva nelle Categorie
+                    </button>
                   </div>
                 )}
               </div>
@@ -538,13 +554,6 @@ export const BrandKit: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              <button 
-                onClick={saveCurrentAsCategory} 
-                className="w-full py-4 mt-4 bg-brand-accent/10 border border-brand-accent/30 text-brand-accent rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent/20 transition-all shadow-xl active:scale-95"
-              >
-                <FolderPlus size={16}/> Salva Lavoro Corrente (AI)
-              </button>
             </div>
           )}
 
