@@ -1,23 +1,35 @@
+
 import React from 'react';
-import { Palette } from 'lucide-react';
+import { Palette, Sparkles, Flame, Zap, Star, Heart, Rocket } from 'lucide-react';
 
 interface BrandLogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showIcon?: boolean;
-  // New props for dynamic branding
   customIcon?: React.ReactNode;
   customImageSrc?: string | null;
   customColor?: string;
   subtitle?: string;
+  showSubtitle?: boolean;
   theme?: 'dark' | 'light';
-  // Props for changing text
   text1?: string;
   text2?: string;
   showSeparator?: boolean;
-  // Prop per il Font
   font?: 'orbitron' | 'anton' | 'playfair' | 'montserrat' | 'lobster';
+  separatorText?: string;
+  iconScale?: number;
+  sticker?: string | null;
+  stickerConfig?: { x: number; y: number; scale: number };
 }
+
+const STICKER_MAP: Record<string, any> = {
+  sparkles: <Sparkles className="animate-pulse" />,
+  flame: <Flame className="animate-bounce" />,
+  zap: <Zap />,
+  star: <Star className="animate-spin-slow" />,
+  heart: <Heart />,
+  rocket: <Rocket />
+};
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({ 
   className = '', 
@@ -25,25 +37,29 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   showIcon = true,
   customIcon,
   customImageSrc,
-  customColor = '#00f260', // Default neon green
+  customColor = '#00f260',
   subtitle,
+  showSubtitle = true,
   theme = 'dark',
   text1 = 'SEK',
   text2 = 'COMIX',
   showSeparator = true,
-  font = 'orbitron'
+  font = 'orbitron',
+  separatorText = '+',
+  iconScale = 1,
+  sticker = null,
+  stickerConfig = { x: 0, y: 0, scale: 1 }
 }) => {
   const sizeConfig = {
-    sm: { text: 'text-lg', icon: 18, space: 'gap-2', sub: 'text-[0.6rem]', imgSize: 'w-5 h-5' },
-    md: { text: 'text-2xl', icon: 26, space: 'gap-3', sub: 'text-[0.7rem]', imgSize: 'w-8 h-8' },
-    lg: { text: 'text-4xl', icon: 40, space: 'gap-4', sub: 'text-xs', imgSize: 'w-12 h-12' },
-    xl: { text: 'text-6xl', icon: 64, space: 'gap-6', sub: 'text-sm', imgSize: 'w-20 h-20' },
+    sm: { text: 'text-lg', icon: 18, space: 'gap-2', sub: 'text-[0.55rem]', imgSize: 'w-5 h-5', sep: 'text-xs', stickerSize: 14 },
+    md: { text: 'text-2xl', icon: 26, space: 'gap-3', sub: 'text-[0.65rem]', imgSize: 'w-8 h-8', sep: 'text-sm', stickerSize: 20 },
+    lg: { text: 'text-4xl', icon: 40, space: 'gap-4', sub: 'text-xl', imgSize: 'w-12 h-12', sep: 'text-xl', stickerSize: 32 },
+    xl: { text: 'text-6xl', icon: 64, space: 'gap-6', sub: 'text-sm', imgSize: 'w-20 h-20', sep: 'text-4xl', stickerSize: 48 },
   };
 
   const config = sizeConfig[size];
   const baseTextColor = theme === 'dark' ? '#ffffff' : '#0f0c29';
 
-  // Mappa i nomi dei font alle classi Tailwind definite in index.html
   const fontClassMap = {
     orbitron: 'font-brand',
     anton: 'font-anton tracking-wide',
@@ -55,17 +71,31 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const selectedFontClass = fontClassMap[font] || fontClassMap['orbitron'];
 
   return (
-    <div className={`flex flex-col ${className} select-none group`}>
+    <div className={`flex flex-col ${className} select-none group relative p-12 transition-all duration-300`}>
+      {/* Sticker Layer con posizionamento dinamico basato sul centro del logo */}
+      {sticker && STICKER_MAP[sticker] && (
+        <div 
+          className="absolute z-20 pointer-events-none transition-all duration-200 ease-out" 
+          style={{ 
+            color: customColor,
+            left: `calc(50% + ${stickerConfig.x}px)`,
+            top: `calc(50% + ${stickerConfig.y}px)`,
+            transform: `translate(-50%, -50%) scale(${stickerConfig.scale})`,
+            filter: `drop-shadow(0 0 10px ${customColor}88)`
+          }}
+        >
+          {React.cloneElement(STICKER_MAP[sticker], { size: config.stickerSize })}
+        </div>
+      )}
+
       <div className={`flex items-center ${config.space} ${selectedFontClass} font-black`}>
         {showIcon && (
-          <div className="relative flex items-center justify-center shrink-0">
-            {/* Outer Glow - Dynamic Color */}
+          <div className="relative flex items-center justify-center shrink-0" 
+               style={{ transform: `scale(${iconScale})`, transition: 'transform 0.3s ease' }}>
             <div 
               className="absolute inset-0 blur-md opacity-40 group-hover:opacity-70 transition-all duration-500 rounded-full scale-125"
               style={{ background: customColor }}
             ></div>
-            
-            {/* Icon Render - dynamic color OR Custom Image */}
             <div 
               className="relative z-10 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] transform group-hover:rotate-12 transition-transform duration-500 flex items-center justify-center"
               style={{ color: baseTextColor }}
@@ -74,8 +104,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
                 <img 
                   src={customImageSrc} 
                   alt="Brand Icon" 
-                  className={`${config.imgSize} object-contain`} 
-                  style={{ filter: theme === 'dark' ? 'drop-shadow(0 0 2px rgba(255,255,255,0.2))' : 'none' }}
+                  className={`${config.imgSize} object-contain rounded-lg shadow-lg`} 
                 />
               ) : (
                 customIcon || <Palette size={config.icon} strokeWidth={2.5} />
@@ -83,25 +112,25 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             </div>
           </div>
         )}
-        <div className={`${config.text} flex items-center whitespace-nowrap`}>
+        <div className={`${config.text} flex items-center whitespace-nowrap leading-none transition-all duration-300`}>
           <span className="drop-shadow-lg transition-colors duration-300 uppercase" style={{ color: baseTextColor }}>{text1}</span>
           
           {showSeparator && (
-            <span className="mx-2 font-light opacity-80" style={{ color: customColor }}>+</span>
+            <span className={`mx-3 font-black ${config.sep} drop-shadow-[0_0_8px_${customColor}66] transition-all`} style={{ color: customColor }}>
+              {separatorText}
+            </span>
           )}
           
-          {/* Aggiungiamo un piccolo margine se non c'è il separatore */}
-          <span className={`bg-clip-text text-transparent bg-gradient-to-r drop-shadow-lg uppercase ${!showSeparator ? 'ml-3' : ''}`}
+          <span className={`bg-clip-text text-transparent bg-gradient-to-r drop-shadow-lg uppercase transition-all ${!showSeparator ? 'ml-4' : ''}`}
                 style={{ backgroundImage: `linear-gradient(to right, ${customColor}, #0575E6)` }}>
             {text2}
           </span>
         </div>
       </div>
       
-      {/* Dynamic Subtitle */}
-      {subtitle && (
+      {subtitle && showSubtitle && (
          <div 
-           className={`${config.sub} font-sans font-bold tracking-[0.3em] uppercase mt-1 ml-auto text-right w-full`}
+           className={`${config.sub} font-sans font-black tracking-[0.4em] uppercase mt-1 ml-auto text-right w-full italic transition-all`}
            style={{ color: customColor, textShadow: `0 0 10px ${customColor}44` }}
          >
            {subtitle}
