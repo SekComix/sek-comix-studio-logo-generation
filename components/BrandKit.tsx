@@ -92,7 +92,6 @@ interface BrandKitProps {
 
 export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'showroom' | 'saved'>('editor');
-  // MODULI CHIUSI DI DEFAULT
   const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
   const [showroomType, setShowroomType] = useState<'neon' | 'totem' | 'card'>('neon');
   const [previewBg, setPreviewBg] = useState('#0f0c29');
@@ -178,13 +177,11 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
     else setLogoSize('xl');
   };
 
-  // LOGICA DI DOWNLOAD REALE
   const downloadLogo = async () => {
     const element = document.getElementById('brand-logo-preview');
     if (!element) return;
 
     try {
-      // Cattura il logo tramite una dataURL basata su SVG (metodo chirurgico senza librerie esterne pesanti)
       const svg = `
         <svg xmlns="http://www.w3.org/2000/svg" width="${element.offsetWidth}" height="${element.offsetHeight}">
           <foreignObject width="100%" height="100%">
@@ -206,7 +203,7 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert("Errore durante il download. Prova a fare uno screenshot.");
+      alert("Errore durante il download.");
     }
   };
 
@@ -258,7 +255,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
     <div className="w-full max-w-6xl mx-auto px-2 md:px-4 mt-8 pb-32">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* AREA PREVIEW */}
         <div className="lg:col-span-8 lg:order-2 space-y-4">
           <div className={`relative w-full aspect-[12/6] md:aspect-[12/5] rounded-[2.5rem] overflow-hidden shadow-2xl flex items-center justify-center border-2 border-white/5 transition-all duration-700 ${activeTab === 'showroom' ? 'bg-black' : ''}`}
             style={{ backgroundColor: activeTab !== 'showroom' ? previewBg : undefined }}>
@@ -337,11 +333,14 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
           <div className="flex bg-[#1a1638] p-2 rounded-3xl border border-white/10 shadow-xl">
             <button onClick={() => setActiveTab('editor')} className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'editor' ? 'bg-brand-accent text-black' : 'text-gray-400'}`}><PenTool size={18}/> Editor</button>
             <button onClick={() => setActiveTab('showroom')} className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'showroom' ? 'bg-brand-accent2 text-white' : 'text-gray-400'}`}><Layout size={18}/> Showroom</button>
-            <button onClick={() => setActiveTab('saved')} className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'saved' ? 'bg-purple-600 text-white' : 'text-gray-400'}`}><Folder size={18}/> Archivio</button>
+            
+            {/* CONTEGGIO DINAMICO NEL PULSANTE */}
+            <button onClick={() => setActiveTab('saved')} className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'saved' ? 'bg-purple-600 text-white' : 'text-gray-400'}`}>
+              <Folder size={18}/> Archivio {customCategories.length > 0 && `(${customCategories.length})`}
+            </button>
           </div>
         </div>
 
-        {/* SIDEBAR */}
         <div className="lg:col-span-4 lg:order-1 space-y-3 overflow-y-auto max-h-[850px] pr-2 no-scrollbar">
           {activeTab === 'editor' && (
             <div className="space-y-3 animate-fade-in">
@@ -477,7 +476,10 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
           
           {activeTab === 'saved' && (
             <div className="bg-[#1a1638] p-6 rounded-3xl border border-white/10 shadow-2xl min-h-[500px] animate-fade-in">
-                <h3 className="font-black text-[10px] text-purple-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Folder size={16}/> Archivio</h3>
+                {/* CONTEGGIO DINAMICO NEL TITOLO SEZIONE */}
+                <h3 className="font-black text-[10px] text-purple-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <Folder size={16}/> Archivio ({customCategories.length})
+                </h3>
                 <div className="grid grid-cols-1 gap-3">
                   {customCategories.map(cat => (
                     <div key={cat.id} className="group bg-black/40 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-brand-accent/30 transition-all">
