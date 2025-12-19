@@ -72,7 +72,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
   return (
     <div className={`flex flex-col ${className} select-none group relative p-12 transition-all duration-300`}>
-      {/* Sticker Layer con posizionamento dinamico basato sul centro del logo */}
+      {/* Sticker Layer con posizionamento dinamico */}
       {sticker && STICKER_MAP[sticker] && (
         <div 
           className="absolute z-20 pointer-events-none transition-all duration-200 ease-out" 
@@ -104,7 +104,12 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
                 <img 
                   src={customImageSrc} 
                   alt="Brand Icon" 
-                  className={`${config.imgSize} object-contain rounded-lg shadow-lg`} 
+                  className={`${config.imgSize} object-contain rounded-lg shadow-lg border border-white/5 transition-all duration-500`} 
+                  style={{ 
+                    // CHIRURGIA: Aggiunto filtro per sincronizzare l'immagine AI col colore della palette scelto live
+                    filter: `drop-shadow(0 0 10px ${customColor}66)`,
+                    backgroundColor: 'rgba(0,0,0,0.4)'
+                  }}
                 />
               ) : (
                 customIcon || <Palette size={config.icon} strokeWidth={2.5} />
