@@ -130,6 +130,7 @@ export const BrandKit: React.FC = () => {
   }, []);
 
   const applyPreset = (presetId: string) => {
+    // Cerca tra i preset di default
     const preset = PRESET_CATEGORIES.find(p => p.id === presetId);
     if (preset) {
       setCurrentIdentity({
@@ -138,16 +139,28 @@ export const BrandKit: React.FC = () => {
         subtitle: preset.sub
       });
       setCustomImageSrc(null);
-      // Finezza: Forza visibilità icona e resetta sticker
+      setShowIcon(true);
+      setSelectedSticker(null);
+      return;
+    }
+
+    // Cerca tra le categorie caricate/personalizzate
+    const custom = customCategories.find(c => c.id === presetId);
+    if (custom) {
+      setCurrentIdentity({
+        iconKey: custom.iconKey,
+        colorHex: custom.color,
+        subtitle: custom.subtitle
+      });
+      setCustomImageSrc(custom.customImage || null);
       setShowIcon(true);
       setSelectedSticker(null);
     }
   };
 
   const saveCurrentAsCategory = () => {
-    // Salvataggio nel set delle "categorie personalizzate" (Archivio)
     const newCat: CustomCategory = {
-      id: Date.now().toString(),
+      id: `custom_${Date.now()}`,
       name: currentIdentity.subtitle || 'PROGETTO',
       iconKey: currentIdentity.iconKey,
       color: currentIdentity.colorHex,
@@ -157,7 +170,7 @@ export const BrandKit: React.FC = () => {
     const updated = [newCat, ...customCategories];
     setCustomCategories(updated);
     localStorage.setItem('sek_studio_custom_cats_v7', JSON.stringify(updated));
-    alert('Progetto archiviato correttamente! Lo trovi nella tab "Archivio".');
+    alert('Progetto salvato con successo nell\'elenco Categorie!');
   };
 
   const deleteCategory = (id: string) => {
@@ -173,7 +186,7 @@ export const BrandKit: React.FC = () => {
       const img = await generateIconImage(iconPrompt);
       setCustomImageSrc(img);
       setShowIcon(true);
-      setSelectedSticker(null); // Pulisce effetti quando arriva l'icona AI
+      setSelectedSticker(null);
     } catch (e) { console.error(e); }
     finally { setIsGeneratingIcon(false); }
   };
@@ -295,6 +308,7 @@ export const BrandKit: React.FC = () => {
               </div>
             )}
 
+            {/* Barra di controllo float integrata */}
             {activeTab === 'editor' && (
               <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-0 bg-black/60 backdrop-blur-3xl p-1 rounded-full border border-white/10 opacity-90 hover:opacity-100 transition-all z-30 shadow-2xl overflow-hidden">
                 
@@ -357,24 +371,48 @@ export const BrandKit: React.FC = () => {
           {activeTab === 'editor' && (
             <div className="space-y-3 animate-fade-in">
               
-              {/* SEZIONE 1: IDENTITÀ & PRESET */}
+              {/* SEZIONE 1: IDENTITÀ & PRESET (Con Categorie Default + Custom) */}
               <div className="flex flex-col gap-2">
                 <SidebarHeader title="Identità & Preset" icon={Fingerprint} section="identity" />
                 {activeSubSection === 'identity' && (
                   <div className="bg-[#1a1638] p-5 rounded-2xl border border-white/10 space-y-5 animate-slide-up">
                     <div className="space-y-2">
-                      <label className="text-[9px] text-gray-500 uppercase font-black">Carica Preset di Base (Default)</label>
+                      <label className="text-[9px] text-gray-500 uppercase font-black">Scegli Categoria (Default + Salva AI)</label>
                       <select 
                         onChange={(e) => applyPreset(e.target.value)}
                         className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none hover:border-brand-accent/30 transition-all cursor-pointer"
                       >
-                        <option value="">Scegli una categoria...</option>
-                        {PRESET_CATEGORIES.map(p => <option key={p.id} value={p.id} className="bg-[#1a1638] text-white">{p.label}</option>)}
+                        <option value="">Seleziona...</option>
+                        <optgroup label="Default Studio" className="bg-black/60">
+                           {PRESET_CATEGORIES.map(p => <option key={p.id} value={p.id} className="bg-[#1a1638] text-white">{p.label}</option>)}
+                        </optgroup>
+                        {customCategories.length > 0 && (
+                          <optgroup label="Le Tue Creazioni AI" className="bg-black/60">
+                             {customCategories.map(c => <option key={c.id} value={c.id} className="bg-[#1a1638] text-brand-accent">{c.name}</option>)}
+                          </optgroup>
+                        )}
                       </select>
                     </div>
 
+                    {customCategories.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <label className="text-[8px] text-gray-400 uppercase font-black">Gestione Categorie Personali</label>
+                        <div className="max-h-32 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                           {customCategories.map(cat => (
+                             <div key={cat.id} className="flex items-center justify-between p-2 bg-black/20 rounded-lg group">
+                                <span className="text-[10px] text-white font-bold truncate max-w-[150px]">{cat.name}</span>
+                                <div className="flex gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                                   <button onClick={() => applyPreset(cat.id)} className="text-brand-accent hover:scale-110"><Eye size={12}/></button>
+                                   <button onClick={() => deleteCategory(cat.id)} className="text-red-500 hover:scale-110"><Trash2 size={12}/></button>
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
-                      <label className="text-[9px] text-gray-500 uppercase font-black">Nomi Brand</label>
+                      <label className="text-[9px] text-gray-500 uppercase font-black">Testi Logo</label>
                       <div className="flex gap-2">
                         <input type="text" value={brandName1} onChange={(e) => setBrandName1(e.target.value.toUpperCase())} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-sm outline-none focus:border-brand-accent transition-all" />
                         <input type="text" value={brandName2} onChange={(e) => setBrandName2(e.target.value.toUpperCase())} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-sm outline-none focus:border-brand-accent transition-all" />
@@ -383,9 +421,9 @@ export const BrandKit: React.FC = () => {
 
                     <div className="space-y-2">
                       <div className="flex justify-between items-center mb-1">
-                        <label className="text-[9px] text-gray-500 uppercase font-black">Sottotitolo (es. STUDIO)</label>
+                        <label className="text-[9px] text-gray-500 uppercase font-black">Sottotitolo Personalizzato</label>
                         <button onClick={() => setShowSubtitle(!showSubtitle)} className={`text-[8px] font-black uppercase px-2 py-1 rounded-md transition-all ${showSubtitle ? 'bg-brand-accent/20 text-brand-accent' : 'bg-red-500/20 text-red-500'}`}>
-                          {showSubtitle ? 'ACCESO' : 'SPENTO'}
+                          {showSubtitle ? 'ON' : 'OFF'}
                         </button>
                       </div>
                       <input type="text" value={currentIdentity.subtitle} onChange={(e) => setCurrentIdentity({...currentIdentity, subtitle: e.target.value.toUpperCase()})} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-xs text-brand-accent outline-none focus:border-brand-accent transition-all" />
@@ -491,12 +529,11 @@ export const BrandKit: React.FC = () => {
                 )}
               </div>
 
-              {/* Pulsante Unificato per Salvare il lavoro Corrente (Preset o AI) */}
               <button 
                 onClick={saveCurrentAsCategory} 
                 className="w-full py-4 mt-4 bg-brand-accent/10 border border-brand-accent/30 text-brand-accent rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent/20 transition-all shadow-xl active:scale-95"
               >
-                <FolderPlus size={16}/> Archivia Progetto (Salva AI)
+                <FolderPlus size={16}/> Salva nelle Categorie (AI)
               </button>
             </div>
           )}
@@ -540,11 +577,8 @@ export const BrandKit: React.FC = () => {
                     customCategories.map(cat => (
                       <div key={cat.id} className="group bg-black/40 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-brand-accent/30 hover:bg-black/60 transition-all shadow-md">
                         <button onClick={() => {
-                          setCurrentIdentity({iconKey: cat.iconKey, colorHex: cat.color, subtitle: cat.subtitle});
-                          setCustomImageSrc(cat.customImage || null);
+                          applyPreset(cat.id);
                           setActiveTab('editor');
-                          setShowIcon(true); // Forza icona on quando si carica dall'archivio
-                          setSelectedSticker(null); // Pulisce sticker residui
                         }} className="flex items-center gap-4 text-left flex-1">
                           <div className="p-2 bg-white/5 rounded-xl transition-all group-hover:scale-110" style={{ color: cat.color }}>
                             {cat.customImage ? <img src={cat.customImage} className="w-10 h-10 rounded-lg object-cover shadow-lg border border-white/10" alt={cat.name} /> : React.cloneElement((BASE_ICONS[cat.iconKey] || BASE_ICONS['palette']).component as any, { size: 28 })}
