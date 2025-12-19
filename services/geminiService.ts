@@ -2,6 +2,23 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 /**
+ * Gestore centralizzato degli errori API
+ */
+const handleApiError = (error: any) => {
+  console.error("Errore API Gemini:", error);
+  
+  if (error.message?.includes("429") || error.status === 429) {
+    throw new Error("Quota superata: Google ha limitato le richieste. Attendi un minuto e riprova.");
+  }
+  
+  if (error.message?.includes("API_KEY") || error.status === 403) {
+    throw new Error("Chiave API non valida o non configurata correttamente nei Secrets di GitHub.");
+  }
+
+  throw new Error(error.message || "Si è verificato un errore imprevisto durante la generazione.");
+};
+
+/**
  * Modifica un'immagine esistente basandosi su un prompt testuale.
  */
 export const editImageWithGemini = async (
@@ -49,18 +66,16 @@ export const editImageWithGemini = async (
     throw new Error("Nessuna immagine generata trovata nella risposta.");
 
   } catch (error: any) {
-    console.error("Errore durante la generazione:", error);
-    throw new Error(error.message || "Si è verificato un errore durante l'editing dell'immagine.");
+    return handleApiError(error);
   }
 };
 
 /**
  * Genera un'icona personalizzata utilizzando il colore del brand scelto dall'utente.
- * Richiede uno sfondo nero puro per simulare la trasparenza in UI.
  */
 export const generateIconImage = async (prompt: string, brandColor: string): Promise<string> => {
-  if (!process.env.API_KEY || process.env.API_KEY === 'undefined') {
-    throw new Error("API_KEY non configurata nei Secrets di GitHub.");
+  if (!process.env.API_KEY || process.env.API_KEY === 'undefined' || process.env.API_KEY === '') {
+    throw new Error("Chiave API mancante. Configura 'API_KEY' nei Secrets di GitHub.");
   }
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -96,8 +111,7 @@ export const generateIconImage = async (prompt: string, brandColor: string): Pro
     }
     throw new Error("Impossibile generare l'icona.");
   } catch (error: any) {
-    console.error("Errore generazione icona AI:", error);
-    throw error;
+    return handleApiError(error);
   }
 };
 
