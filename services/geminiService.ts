@@ -1,20 +1,18 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
+/**
+ * Modifica un'immagine esistente basandosi su un prompt testuale.
+ */
 export const editImageWithGemini = async (
   base64Image: string,
   mimeType: string,
   prompt: string
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API Key mancante. Assicurati che process.env.API_KEY sia configurato.");
-  }
-
-  // Initialize the client right before usage as per guidelines
+  // Always create a new instance right before making an API call to ensure it always uses the most up-to-date API key.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
-    // Clean base64 string if it contains the data URL prefix
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
 
     const response = await ai.models.generateContent({
@@ -34,7 +32,7 @@ export const editImageWithGemini = async (
       },
     });
 
-    // Iterate through parts to find the image
+    // Iterate through all parts to find the image part, do not assume it is the first part.
     const parts = response.candidates?.[0]?.content?.parts;
     
     if (parts) {
@@ -53,17 +51,49 @@ export const editImageWithGemini = async (
   }
 };
 
-// Interface for Brand Identity Response
+/**
+ * Genera un'icona personalizzata da zero partendo da un prompt.
+ */
+export const generateIconImage = async (prompt: string): Promise<string> => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [
+          {
+            text: `Crea un'icona logo quadrata, stile minimalista, professionale, alta qualità, sfondo trasparente o nero pieno: ${prompt}`
+          }
+        ]
+      },
+    });
+
+    const parts = response.candidates?.[0]?.content?.parts;
+    if (parts) {
+      // Find the image part as per guidelines.
+      for (const part of parts) {
+        if (part.inlineData && part.inlineData.data) {
+          return `data:image/png;base64,${part.inlineData.data}`;
+        }
+      }
+    }
+    throw new Error("Impossibile generare l'icona.");
+  } catch (error: any) {
+    throw new Error(error.message || "Errore generazione icona AI.");
+  }
+};
+
 export interface BrandIdentityResult {
   iconKey: string;
   colorHex: string;
   subtitle: string;
 }
 
+/**
+ * Genera una Brand Identity basata sulla descrizione dell'app fornita dall'utente.
+ */
 export const generateBrandIdentity = async (description: string): Promise<BrandIdentityResult> => {
-  if (!process.env.API_KEY) throw new Error("API Key mancante.");
-
-  // Initialize the client right before usage as per guidelines
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
@@ -75,15 +105,11 @@ export const generateBrandIdentity = async (description: string): Promise<BrandI
       ['palette', 'utensils', 'camera', 'heart', 'code', 'music', 'dumbbell', 'briefcase', 'plane', 'gamepad', 'shopping-cart', 'book', 'car', 'home', 'leaf'].
       
       Se nessuna si adatta perfettamente, usa 'palette'.
-      
-      Devi anche scegliere un colore HEX "Neon" adatto (es. verde fluo, ciano, fucsia, arancione acceso).
-      
-      Devi generare un breve SOTTOTITOLO in maiuscolo (max 15 caratteri) che descriva la categoria (es. "RICETTE", "WEDDING", "TRAVEL", "GAMING").
-
+      Devi anche scegliere un colore HEX "Neon" adatto.
+      Devi generare un breve SOTTOTITOLO in maiuscolo (max 15 caratteri).
       Rispondi ESCLUSIVAMENTE con un oggetto JSON.
     `;
 
-    // Using gemini-3-flash-preview for basic text tasks as per guidelines
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
@@ -96,23 +122,18 @@ export const generateBrandIdentity = async (description: string): Promise<BrandI
             colorHex: { type: Type.STRING },
             subtitle: { type: Type.STRING }
           },
-          required: ["iconKey", "colorHex", "subtitle"]
+          required: ["iconKey", "colorHex", "subtitle"],
+          propertyOrdering: ["iconKey", "colorHex", "subtitle"]
         }
       }
     });
 
+    // The GenerateContentResponse features a text property (not a method).
     const text = response.text;
     if (!text) throw new Error("Risposta vuota dall'AI");
-
     return JSON.parse(text) as BrandIdentityResult;
-
   } catch (error) {
-    console.error("Errore generazione brand:", error);
-    // Fallback default
-    return {
-      iconKey: 'palette',
-      colorHex: '#00f260',
-      subtitle: 'STUDIO'
-    };
+    console.error("Errore generazione Brand Identity:", error);
+    return { iconKey: 'palette', colorHex: '#00f260', subtitle: 'STUDIO' };
   }
 };
