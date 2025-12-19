@@ -51,6 +51,7 @@ export const editImageWithGemini = async (
 
 /**
  * Genera un'icona personalizzata utilizzando il colore del brand scelto dall'utente.
+ * Richiede uno sfondo nero puro per simulare la trasparenza in UI.
  */
 export const generateIconImage = async (prompt: string, brandColor: string): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -61,10 +62,11 @@ export const generateIconImage = async (prompt: string, brandColor: string): Pro
       contents: {
         parts: [
           {
-            text: `Crea un'icona logo professionale e minimalista. 
+            text: `Crea un'icona logo professionale, pulita e minimalista. 
                    Soggetto: ${prompt}. 
-                   Schema Colore: utilizza principalmente il colore ${brandColor} su sfondo nero profondo o scuro. 
-                   Stile: High-tech, neon glow, alta risoluzione, centrato.`
+                   Schema Colore: utilizza esclusivamente il colore ${brandColor} (e sue sfumature) per i dettagli.
+                   IMPORTANTE: Lo sfondo deve essere RIGOROSAMENTE NERO PURO (#000000). 
+                   Stile: Flat design con neon glow, alta risoluzione, centrato, senza cornici.`
           }
         ]
       },
