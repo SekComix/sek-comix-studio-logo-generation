@@ -71,7 +71,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const selectedFontClass = fontClassMap[font] || fontClassMap['orbitron'];
 
   return (
-    <div className={`flex flex-col ${className} select-none group relative transition-all duration-300`}>
+    <div id="brand-logo-preview" className={`flex flex-col ${className} select-none group relative transition-all duration-300`}>
       {sticker && STICKER_MAP[sticker] && (
         <div className="absolute z-20 pointer-events-none" style={{ color: customColor, left: `calc(50% + ${stickerConfig.x}px)`, top: `calc(50% + ${stickerConfig.y}px)`, transform: `translate(-50%, -50%) scale(${stickerConfig.scale})`, filter: `drop-shadow(0 0 10px ${customColor}88)` }}>
           {React.cloneElement(STICKER_MAP[sticker], { size: config.stickerSize })}
@@ -90,12 +90,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
                     alt="Brand Icon" 
                     className={`${config.imgSize} object-contain transition-all duration-300`} 
                     style={{ 
-                      // SCREEN rimuove perfettamente lo sfondo nero puro e rende l'icona trasparente fondendola con il preview background
                       mixBlendMode: 'screen',
                       filter: `brightness(1.4) drop-shadow(0 0 4px ${customColor})`,
                     }}
                   />
-                  {/* Overlay per sincronizzare il colore istantaneamente al cambio palette */}
                   <div 
                     className="absolute inset-0 pointer-events-none opacity-20 mix-blend-color rounded-lg"
                     style={{ backgroundColor: customColor }}
@@ -109,7 +107,18 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         )}
         <div className={`${config.text} flex items-center whitespace-nowrap leading-none`}>
           <span className="drop-shadow-lg uppercase" style={{ color: baseTextColor }}>{text1}</span>
-          {showSeparator && <span className={`mx-3 font-black ${config.sep}`} style={{ color: customColor }}>{separatorText}</span>}
+          
+          {showSeparator ? (
+            <span 
+              className={`mx-3 font-black ${config.sep} ${separatorText && separatorText.length > 1 ? 'px-2' : ''}`} 
+              style={{ color: customColor }}
+            >
+              {separatorText === ' ' ? '\u00A0' : separatorText}
+            </span>
+          ) : (
+            <span className="mx-2">&nbsp;</span>
+          )}
+
           <span className="bg-clip-text text-transparent bg-gradient-to-r uppercase" style={{ backgroundImage: `linear-gradient(to right, ${customColor}, #0575E6)` }}>{text2}</span>
         </div>
       </div>
