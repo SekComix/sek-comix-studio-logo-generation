@@ -83,7 +83,7 @@ type SubSection = 'identity' | 'ai' | 'stickers' | 'style';
 
 export const BrandKit: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'editor' | 'showroom' | 'saved'>('editor');
-  const [activeSubSection, setActiveSubSection] = useState<SubSection>('identity');
+  const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
   const [showroomType, setShowroomType] = useState<'neon' | 'totem' | 'card'>('neon');
   const [previewBg, setPreviewBg] = useState('#0f0c29');
   const [logoTheme, setLogoTheme] = useState<'dark' | 'light'>('dark');
@@ -138,10 +138,14 @@ export const BrandKit: React.FC = () => {
         subtitle: preset.sub
       });
       setCustomImageSrc(null);
+      // Finezza: Forza visibilità icona e resetta sticker
+      setShowIcon(true);
+      setSelectedSticker(null);
     }
   };
 
   const saveCurrentAsCategory = () => {
+    // Salvataggio nel set delle "categorie personalizzate" (Archivio)
     const newCat: CustomCategory = {
       id: Date.now().toString(),
       name: currentIdentity.subtitle || 'PROGETTO',
@@ -153,6 +157,7 @@ export const BrandKit: React.FC = () => {
     const updated = [newCat, ...customCategories];
     setCustomCategories(updated);
     localStorage.setItem('sek_studio_custom_cats_v7', JSON.stringify(updated));
+    alert('Progetto archiviato correttamente! Lo trovi nella tab "Archivio".');
   };
 
   const deleteCategory = (id: string) => {
@@ -168,6 +173,7 @@ export const BrandKit: React.FC = () => {
       const img = await generateIconImage(iconPrompt);
       setCustomImageSrc(img);
       setShowIcon(true);
+      setSelectedSticker(null); // Pulisce effetti quando arriva l'icona AI
     } catch (e) { console.error(e); }
     finally { setIsGeneratingIcon(false); }
   };
@@ -184,7 +190,7 @@ export const BrandKit: React.FC = () => {
 
   const SidebarHeader = ({ title, icon: Icon, section }: { title: string, icon: any, section: SubSection }) => (
     <button 
-      onClick={() => setActiveSubSection(activeSubSection === section ? 'identity' : section)}
+      onClick={() => setActiveSubSection(activeSubSection === section ? null : section)}
       className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${activeSubSection === section ? 'bg-brand-accent/20 border border-brand-accent/30 text-brand-accent' : 'bg-black/20 border border-white/5 text-gray-400 hover:text-white'}`}
     >
       <div className="flex items-center gap-3">
@@ -290,16 +296,51 @@ export const BrandKit: React.FC = () => {
             )}
 
             {activeTab === 'editor' && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-row gap-2 bg-black/40 backdrop-blur-xl p-1.5 rounded-full border border-white/10 opacity-60 hover:opacity-100 transition-all z-30 shadow-lg">
-                {BG_PRESETS.map(bg => (
-                  <button 
-                    key={bg.hex} 
-                    onClick={() => {setPreviewBg(bg.hex); setLogoTheme(bg.theme as any)}} 
-                    className={`w-4 h-4 rounded-full border transition-all ${previewBg === bg.hex ? 'border-brand-accent ring-2 ring-brand-accent/30' : 'border-white/20'}`} 
-                    style={{ backgroundColor: bg.hex }} 
-                    title={bg.name}
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-0 bg-black/60 backdrop-blur-3xl p-1 rounded-full border border-white/10 opacity-90 hover:opacity-100 transition-all z-30 shadow-2xl overflow-hidden">
+                
+                <div className="flex gap-1.5 px-4 border-r border-white/10 py-2">
+                  {BG_PRESETS.map(bg => (
+                    <button 
+                      key={bg.hex} 
+                      onClick={() => {setPreviewBg(bg.hex); setLogoTheme(bg.theme as any)}} 
+                      className={`w-4 h-4 rounded-full border transition-all ${previewBg === bg.hex ? 'border-brand-accent ring-2 ring-brand-accent/20 scale-110' : 'border-white/20 opacity-50 hover:opacity-100'}`} 
+                      style={{ backgroundColor: bg.hex }} 
+                    />
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3 px-5 py-2">
+                   <div className="flex flex-col items-center">
+                      <span className="text-[6px] font-black text-white/30 uppercase tracking-widest leading-none mb-0.5">Larghezza</span>
+                      <span className="text-[8px] font-mono font-bold text-brand-accent leading-none">{pixelSize}px</span>
+                   </div>
+                   <input 
+                    type="range" 
+                    min="400" max="4000" step="10" 
+                    value={pixelSize} 
+                    onChange={handleRangeChange} 
+                    className="w-20 md:w-32 h-1 accent-brand-accent bg-white/10 rounded-full appearance-none cursor-pointer" 
                   />
-                ))}
+                </div>
+
+                <div className="flex gap-1 px-4 border-l border-white/10 py-1">
+                   {['sm', 'md', 'lg', 'xl'].map((s: any) => 
+                    <button 
+                      key={s} 
+                      onClick={() => setSizePreset(s as any)} 
+                      className={`w-7 h-7 rounded-full text-[7px] font-black transition-all flex items-center justify-center ${downloadSize === s ? 'bg-brand-accent text-black shadow-lg' : 'bg-transparent text-gray-500 hover:text-white hover:bg-white/5'}`}
+                    >
+                      {s.toUpperCase()}
+                    </button>
+                   )}
+                </div>
+                
+                <button 
+                  onClick={downloadLogo}
+                  className="mr-1 w-8 h-8 flex items-center justify-center bg-brand-accent/20 text-brand-accent rounded-full hover:bg-brand-accent hover:text-black transition-all"
+                >
+                  <Download size={12}/>
+                </button>
               </div>
             )}
           </div>
@@ -308,31 +349,6 @@ export const BrandKit: React.FC = () => {
             <button onClick={() => setActiveTab('editor')} className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'editor' ? 'bg-brand-accent text-black' : 'text-gray-400'}`}><PenTool size={18}/> Editor</button>
             <button onClick={() => setActiveTab('showroom')} className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'showroom' ? 'bg-brand-accent2 text-white' : 'text-gray-400'}`}><Layout size={18}/> Showroom</button>
             <button onClick={() => setActiveTab('saved')} className={`flex-1 py-4 rounded-2xl text-xs font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'saved' ? 'bg-purple-600 text-white' : 'text-gray-400'}`}><Folder size={18}/> Archivio</button>
-          </div>
-
-          <div className="bg-[#1a1638]/60 p-8 rounded-[2.5rem] border border-white/10 backdrop-blur-2xl shadow-2xl space-y-6">
-             <div className="flex justify-between items-end">
-                <div>
-                   <p className="text-[10px] text-brand-accent uppercase font-black tracking-widest mb-1">Dimensione Output</p>
-                   <p className="text-4xl font-mono font-black italic transition-all duration-300">
-                     {pixelSize} <span className="text-sm opacity-40 font-sans tracking-normal">x</span> {currentHeight}
-                   </p>
-                </div>
-                <div className="flex gap-1">
-                   {['sm', 'md', 'lg', 'xl'].map((s: any) => 
-                    <button key={s} 
-                      onClick={() => setSizePreset(s as any)} 
-                      className={`px-4 py-2 rounded-lg text-[10px] font-black transition-all ${downloadSize === s ? 'bg-brand-accent text-black scale-110 shadow-lg shadow-brand-accent/20' : 'bg-black/20 text-gray-500 hover:text-white'}`}
-                    >
-                      {s.toUpperCase()}
-                    </button>
-                   )}
-                </div>
-             </div>
-             <input type="range" min="400" max="4000" step="10" value={pixelSize} onChange={handleRangeChange} className="w-full h-2 accent-brand-accent bg-black/40 rounded-lg appearance-none cursor-pointer" />
-             <button onClick={downloadLogo} className="w-full py-5 bg-gradient-to-r from-brand-accent to-brand-accent2 text-white font-black rounded-2xl uppercase tracking-widest hover:scale-[1.01] transition-all flex items-center justify-center gap-3 shadow-xl">
-                {downloadStatus === 'generating' ? <RefreshCw className="animate-spin"/> : <Download/>} Scarica Kit Immagine
-             </button>
           </div>
         </div>
 
@@ -347,7 +363,7 @@ export const BrandKit: React.FC = () => {
                 {activeSubSection === 'identity' && (
                   <div className="bg-[#1a1638] p-5 rounded-2xl border border-white/10 space-y-5 animate-slide-up">
                     <div className="space-y-2">
-                      <label className="text-[9px] text-gray-500 uppercase font-black">Categoria Preset (Default)</label>
+                      <label className="text-[9px] text-gray-500 uppercase font-black">Carica Preset di Base (Default)</label>
                       <select 
                         onChange={(e) => applyPreset(e.target.value)}
                         className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none hover:border-brand-accent/30 transition-all cursor-pointer"
@@ -358,7 +374,7 @@ export const BrandKit: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[9px] text-gray-500 uppercase font-black">Testi Brand</label>
+                      <label className="text-[9px] text-gray-500 uppercase font-black">Nomi Brand</label>
                       <div className="flex gap-2">
                         <input type="text" value={brandName1} onChange={(e) => setBrandName1(e.target.value.toUpperCase())} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-sm outline-none focus:border-brand-accent transition-all" />
                         <input type="text" value={brandName2} onChange={(e) => setBrandName2(e.target.value.toUpperCase())} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-center font-black text-sm outline-none focus:border-brand-accent transition-all" />
@@ -367,7 +383,7 @@ export const BrandKit: React.FC = () => {
 
                     <div className="space-y-2">
                       <div className="flex justify-between items-center mb-1">
-                        <label className="text-[9px] text-gray-500 uppercase font-black">Sottotitolo Personalizzato</label>
+                        <label className="text-[9px] text-gray-500 uppercase font-black">Sottotitolo (es. STUDIO)</label>
                         <button onClick={() => setShowSubtitle(!showSubtitle)} className={`text-[8px] font-black uppercase px-2 py-1 rounded-md transition-all ${showSubtitle ? 'bg-brand-accent/20 text-brand-accent' : 'bg-red-500/20 text-red-500'}`}>
                           {showSubtitle ? 'ACCESO' : 'SPENTO'}
                         </button>
@@ -475,7 +491,13 @@ export const BrandKit: React.FC = () => {
                 )}
               </div>
 
-              <button onClick={saveCurrentAsCategory} className="w-full py-4 mt-4 bg-brand-accent/10 border border-brand-accent/30 text-brand-accent rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent/20 transition-all shadow-xl active:scale-95"><FolderPlus size={16}/> Archivia Progetto</button>
+              {/* Pulsante Unificato per Salvare il lavoro Corrente (Preset o AI) */}
+              <button 
+                onClick={saveCurrentAsCategory} 
+                className="w-full py-4 mt-4 bg-brand-accent/10 border border-brand-accent/30 text-brand-accent rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent/20 transition-all shadow-xl active:scale-95"
+              >
+                <FolderPlus size={16}/> Archivia Progetto (Salva AI)
+              </button>
             </div>
           )}
 
@@ -521,6 +543,8 @@ export const BrandKit: React.FC = () => {
                           setCurrentIdentity({iconKey: cat.iconKey, colorHex: cat.color, subtitle: cat.subtitle});
                           setCustomImageSrc(cat.customImage || null);
                           setActiveTab('editor');
+                          setShowIcon(true); // Forza icona on quando si carica dall'archivio
+                          setSelectedSticker(null); // Pulisce sticker residui
                         }} className="flex items-center gap-4 text-left flex-1">
                           <div className="p-2 bg-white/5 rounded-xl transition-all group-hover:scale-110" style={{ color: cat.color }}>
                             {cat.customImage ? <img src={cat.customImage} className="w-10 h-10 rounded-lg object-cover shadow-lg border border-white/10" alt={cat.name} /> : React.cloneElement((BASE_ICONS[cat.iconKey] || BASE_ICONS['palette']).component as any, { size: 28 })}
