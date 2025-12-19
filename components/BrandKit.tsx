@@ -183,12 +183,12 @@ export const BrandKit: React.FC = () => {
     if (!iconPrompt.trim()) return;
     setIsGeneratingIcon(true);
     try {
-      const img = await generateIconImage(iconPrompt);
+      // Passiamo il colore corrente dell'identità alla funzione di generazione
+      const img = await generateIconImage(iconPrompt, currentIdentity.colorHex);
       setCustomImageSrc(img);
       setShowIcon(true);
       setSelectedSticker(null);
       
-      // CHIRURGIA: Aggiorniamo il sottotitolo basandoci sul prompt
       const words = iconPrompt.trim().split(/\s+/);
       const derivedSub = words.length > 1 
         ? (words[0] + " " + words[1]).toUpperCase() 
@@ -469,7 +469,6 @@ export const BrandKit: React.FC = () => {
                        <input type="range" min="0.3" max="2.5" step="0.1" value={iconScale} onChange={(e) => setIconScale(parseFloat(e.target.value))} className="w-full h-1.5 accent-brand-accent bg-black/60 rounded-full appearance-none cursor-pointer" />
                     </div>
 
-                    {/* CHIRURGIA: Pulsante Salvataggio Spostato Qui */}
                     <button 
                       onClick={saveCurrentAsCategory} 
                       className="w-full py-4 mt-2 bg-brand-accent/10 border border-brand-accent/30 text-brand-accent rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-brand-accent/20 transition-all shadow-xl active:scale-95"
