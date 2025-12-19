@@ -51,8 +51,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   stickerConfig = { x: 0, y: 0, scale: 1 }
 }) => {
   const sizeConfig = {
-    sm: { text: 'text-lg', icon: 18, space: 'gap-2', sub: 'text-[0.55rem]', imgSize: 'w-5 h-5', sep: 'text-xs', stickerSize: 14 },
-    md: { text: 'text-2xl', icon: 26, space: 'gap-3', sub: 'text-[0.65rem]', imgSize: 'w-8 h-8', sep: 'text-sm', stickerSize: 20 },
+    sm: { text: 'text-lg', icon: 18, space: 'gap-2', sub: 'text-[0.45rem]', imgSize: 'w-5 h-5', sep: 'text-xs', stickerSize: 14 },
+    md: { text: 'text-2xl', icon: 26, space: 'gap-3', sub: 'text-[0.55rem]', imgSize: 'w-8 h-8', sep: 'text-sm', stickerSize: 20 },
     lg: { text: 'text-4xl', icon: 40, space: 'gap-4', sub: 'text-xl', imgSize: 'w-12 h-12', sep: 'text-xl', stickerSize: 32 },
     xl: { text: 'text-6xl', icon: 64, space: 'gap-6', sub: 'text-sm', imgSize: 'w-20 h-20', sep: 'text-4xl', stickerSize: 48 },
   };
@@ -71,73 +71,51 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const selectedFontClass = fontClassMap[font] || fontClassMap['orbitron'];
 
   return (
-    <div className={`flex flex-col ${className} select-none group relative p-12 transition-all duration-300`}>
-      {/* Sticker Layer con posizionamento dinamico */}
+    <div className={`flex flex-col ${className} select-none group relative transition-all duration-300`}>
       {sticker && STICKER_MAP[sticker] && (
-        <div 
-          className="absolute z-20 pointer-events-none transition-all duration-200 ease-out" 
-          style={{ 
-            color: customColor,
-            left: `calc(50% + ${stickerConfig.x}px)`,
-            top: `calc(50% + ${stickerConfig.y}px)`,
-            transform: `translate(-50%, -50%) scale(${stickerConfig.scale})`,
-            filter: `drop-shadow(0 0 10px ${customColor}88)`
-          }}
-        >
+        <div className="absolute z-20 pointer-events-none" style={{ color: customColor, left: `calc(50% + ${stickerConfig.x}px)`, top: `calc(50% + ${stickerConfig.y}px)`, transform: `translate(-50%, -50%) scale(${stickerConfig.scale})`, filter: `drop-shadow(0 0 10px ${customColor}88)` }}>
           {React.cloneElement(STICKER_MAP[sticker], { size: config.stickerSize })}
         </div>
       )}
 
       <div className={`flex items-center ${config.space} ${selectedFontClass} font-black`}>
         {showIcon && (
-          <div className="relative flex items-center justify-center shrink-0" 
-               style={{ transform: `scale(${iconScale})`, transition: 'transform 0.3s ease' }}>
-            <div 
-              className="absolute inset-0 blur-md opacity-40 group-hover:opacity-70 transition-all duration-500 rounded-full scale-125"
-              style={{ background: customColor }}
-            ></div>
-            <div 
-              className="relative z-10 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] transform group-hover:rotate-12 transition-transform duration-500 flex items-center justify-center"
-              style={{ color: baseTextColor }}
-            >
+          <div className="relative flex items-center justify-center shrink-0" style={{ transform: `scale(${iconScale})`, transition: 'transform 0.3s ease' }}>
+            <div className="absolute inset-0 blur-md opacity-30 rounded-full scale-125" style={{ background: customColor }}></div>
+            <div className="relative z-10 flex items-center justify-center">
               {customImageSrc ? (
-                <img 
-                  src={customImageSrc} 
-                  alt="Brand Icon" 
-                  className={`${config.imgSize} object-contain rounded-lg shadow-lg border border-white/5 transition-all duration-500`} 
-                  style={{ 
-                    // CHIRURGIA: Aggiunto filtro per sincronizzare l'immagine AI col colore della palette scelto live
-                    filter: `drop-shadow(0 0 10px ${customColor}66)`,
-                    backgroundColor: 'rgba(0,0,0,0.4)'
-                  }}
-                />
+                <div className="relative flex items-center justify-center">
+                  <img 
+                    src={customImageSrc} 
+                    alt="Brand Icon" 
+                    className={`${config.imgSize} object-contain transition-all duration-300`} 
+                    style={{ 
+                      // SCREEN rimuove perfettamente lo sfondo nero puro e rende l'icona trasparente fondendola con il preview background
+                      mixBlendMode: 'screen',
+                      filter: `brightness(1.4) drop-shadow(0 0 4px ${customColor})`,
+                    }}
+                  />
+                  {/* Overlay per sincronizzare il colore istantaneamente al cambio palette */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-20 mix-blend-color rounded-lg"
+                    style={{ backgroundColor: customColor }}
+                  ></div>
+                </div>
               ) : (
-                customIcon || <Palette size={config.icon} strokeWidth={2.5} />
+                <div style={{ color: customColor }}>{customIcon || <Palette size={config.icon} strokeWidth={2.5} />}</div>
               )}
             </div>
           </div>
         )}
-        <div className={`${config.text} flex items-center whitespace-nowrap leading-none transition-all duration-300`}>
-          <span className="drop-shadow-lg transition-colors duration-300 uppercase" style={{ color: baseTextColor }}>{text1}</span>
-          
-          {showSeparator && (
-            <span className={`mx-3 font-black ${config.sep} drop-shadow-[0_0_8px_${customColor}66] transition-all`} style={{ color: customColor }}>
-              {separatorText}
-            </span>
-          )}
-          
-          <span className={`bg-clip-text text-transparent bg-gradient-to-r drop-shadow-lg uppercase transition-all ${!showSeparator ? 'ml-4' : ''}`}
-                style={{ backgroundImage: `linear-gradient(to right, ${customColor}, #0575E6)` }}>
-            {text2}
-          </span>
+        <div className={`${config.text} flex items-center whitespace-nowrap leading-none`}>
+          <span className="drop-shadow-lg uppercase" style={{ color: baseTextColor }}>{text1}</span>
+          {showSeparator && <span className={`mx-3 font-black ${config.sep}`} style={{ color: customColor }}>{separatorText}</span>}
+          <span className="bg-clip-text text-transparent bg-gradient-to-r uppercase" style={{ backgroundImage: `linear-gradient(to right, ${customColor}, #0575E6)` }}>{text2}</span>
         </div>
       </div>
       
       {subtitle && showSubtitle && (
-         <div 
-           className={`${config.sub} font-sans font-black tracking-[0.4em] uppercase mt-1 ml-auto text-right w-full italic transition-all`}
-           style={{ color: customColor, textShadow: `0 0 10px ${customColor}44` }}
-         >
+         <div className={`${config.sub} font-sans font-black tracking-[0.4em] uppercase mt-1 text-right italic`} style={{ color: customColor }}>
            {subtitle}
          </div>
       )}
