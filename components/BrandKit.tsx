@@ -11,6 +11,8 @@ import {
   Settings2, Fingerprint, Monitor, Eye, EyeOff, Save, Move
 } from 'lucide-react';
 
+const STORAGE_KEY = 'sek_studio_vault_vFinal_2025';
+
 const BASE_ICONS: Record<string, { component: React.ReactNode, label: string }> = {
   'palette': { component: <Palette />, label: 'Arte' },
   'camera': { component: <Camera />, label: 'Foto' },
@@ -92,7 +94,6 @@ interface BrandKitProps {
 
 export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'showroom' | 'saved'>('editor');
-  // MODULI CHIUSI DI DEFAULT
   const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
   const [showroomType, setShowroomType] = useState<'neon' | 'totem' | 'card'>('neon');
   const [previewBg, setPreviewBg] = useState('#0f0c29');
@@ -105,16 +106,17 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
   const [logoSize, setLogoSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('md');
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
 
+  // Caricamento iniziale Archivio
   useEffect(() => {
-    const stored = localStorage.getItem('sek_studio_custom_cats_v10');
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      try { setCustomCategories(JSON.parse(stored)); } catch (e) { console.error(e); }
+      try {
+        setCustomCategories(JSON.parse(stored));
+      } catch (e) {
+        console.error("Errore archivio:", e);
+      }
     }
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('sek_studio_custom_cats_v10', JSON.stringify(customCategories));
-  }, [customCategories]);
 
   const applyPreset = (presetId: string) => {
     setSelectedSticker(null);
@@ -189,8 +191,8 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
 
   const saveCurrentAsCategory = () => {
     const newCat: CustomCategory = { 
-      id: `custom_${Date.now()}`, 
-      name: globalState.subtitle || 'PROGETTO AI', 
+      id: `save_${Date.now()}`, 
+      name: globalState.subtitle || 'PROGETTO STUDIO', 
       iconKey: globalState.iconKey, 
       color: globalState.color, 
       subtitle: globalState.subtitle, 
@@ -198,13 +200,23 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
       iconPos: globalState.iconPos,
       iconScale: globalState.iconScale
     };
-    setCustomCategories(prev => [newCat, ...prev]);
+    
+    setCustomCategories(prev => {
+      const next = [newCat, ...prev];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
     alert('Salvato nell\'Archivio!');
   };
 
-  const deleteCategory = (id: string) => {
-    if (window.confirm('Eliminare definitivamente questo progetto?')) {
-      setCustomCategories(prev => prev.filter(c => c.id !== id));
+  // ELIMINAZIONE ATOMICA CHIRURGICA
+  const handleDelete = (id: string) => {
+    if (window.confirm('Vuoi eliminare definitivamente questo progetto dall\'Archivio?')) {
+      setCustomCategories(prev => {
+        const next = prev.filter(c => String(c.id) !== String(id));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        return next;
+      });
     }
   };
 
@@ -218,7 +230,7 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
   return (
     <div className="w-full max-w-6xl mx-auto px-2 md:px-4 pb-32">
       
-      {/* 1. NAV BAR CENTRATA */}
+      {/* NAV BAR CENTRATA */}
       <div className="flex justify-center mb-12">
         <div className="flex bg-white/5 backdrop-blur-2xl p-2 rounded-full border border-white/20 shadow-2xl max-w-2xl w-full gap-2">
           <button onClick={() => setActiveTab('editor')} className={`flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'editor' ? 'bg-brand-accent text-black shadow-lg' : 'text-white/60 hover:text-white hover:bg-white/5'}`}><PenTool size={18}/> Editor</button>
@@ -286,7 +298,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
         <div className="lg:col-span-4 lg:order-1 space-y-4 overflow-y-auto max-h-[850px] pr-2 no-scrollbar">
           {activeTab === 'editor' && (
             <div className="space-y-4 animate-fade-in">
-              {/* 1. IDENTITÀ */}
               <div className="flex flex-col gap-2">
                 <SidebarHeader title="Identità & Preset" icon={Fingerprint} section="identity" />
                 {activeSubSection === 'identity' && (
@@ -309,8 +320,8 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
                     <div className="space-y-3">
                       <label className="text-[10px] text-white font-black uppercase tracking-widest">Testi Brand</label>
                       <div className="flex gap-3">
-                        <input type="text" value={globalState.text1} onChange={(e) => setGlobalState({...globalState, text1: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-sm text-white outline-none focus:border-brand-accent focus:shadow-[0_0_10px_rgba(0,242,96,0.2)]" />
-                        <input type="text" value={globalState.text2} onChange={(e) => setGlobalState({...globalState, text2: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-sm text-white outline-none focus:border-brand-accent focus:shadow-[0_0_10px_rgba(0,242,96,0.2)]" />
+                        <input type="text" value={globalState.text1} onChange={(e) => setGlobalState({...globalState, text1: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-sm text-white outline-none focus:border-brand-accent" />
+                        <input type="text" value={globalState.text2} onChange={(e) => setGlobalState({...globalState, text2: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-sm text-white outline-none focus:border-brand-accent" />
                       </div>
                     </div>
 
@@ -327,14 +338,23 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
                     </div>
 
                     <div className="space-y-3">
-                      <label className="text-[10px] text-white font-black uppercase tracking-widest">Tagline / Sottotitolo</label>
+                      <div className="flex justify-between items-center">
+                         <label className="text-[10px] text-white font-black uppercase tracking-widest">Tagline / Sottotitolo</label>
+                         <button 
+                           type="button"
+                           onClick={() => setGlobalState((prev: any) => ({...prev, showSubtitle: !prev.showSubtitle}))} 
+                           className={`text-[9px] font-black uppercase px-4 py-2 rounded-lg transition-all border-2 ${globalState.showSubtitle ? 'bg-brand-accent text-black border-brand-accent shadow-[0_0_15px_rgba(0,242,96,0.5)]' : 'bg-white/5 text-white/40 border-white/10'}`}
+                         >
+                           {globalState.showSubtitle ? 'ATTIVO' : 'OFF'}
+                         </button>
+                      </div>
                       <input type="text" value={globalState.subtitle} onChange={(e) => setGlobalState({...globalState, subtitle: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-xs text-brand-accent outline-none tracking-[0.2em]" />
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* 2. ICONA AI */}
+              {/* ICONA AI */}
               <div className="flex flex-col gap-2">
                 <SidebarHeader title="Icona & AI" icon={ImageIcon} section="ai" />
                 {activeSubSection === 'ai' && (
@@ -369,7 +389,7 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
                 )}
               </div>
 
-              {/* 3. STICKERS */}
+              {/* STICKERS */}
               <div className="flex flex-col gap-2">
                 <SidebarHeader title="Effetti Stickers" icon={Star} section="stickers" />
                 {activeSubSection === 'stickers' && (
@@ -401,7 +421,7 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
                 )}
               </div>
 
-              {/* 4. DESIGN */}
+              {/* DESIGN */}
               <div className="flex flex-col gap-2">
                 <SidebarHeader title="Stile & Colore" icon={Settings2} section="style" />
                 {activeSubSection === 'style' && (
@@ -426,13 +446,13 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
             </div>
           )}
           
-          {/* ARCHIVIO */}
+          {/* ARCHIVIO SISTEMATO DEFINITIVAMENTE */}
           {activeTab === 'saved' && (
-            <div className="bg-[#1a1638] p-8 rounded-[2.5rem] border border-white/10 shadow-2xl min-h-[500px] animate-fade-in overflow-y-auto no-scrollbar">
+            <div className="bg-[#1a1638] p-8 rounded-[2.5rem] border border-white/10 shadow-2xl min-h-[550px] animate-fade-in overflow-y-auto no-scrollbar">
                 <h3 className="font-black text-xs text-brand-accent uppercase tracking-[0.3em] mb-8 flex items-center gap-3">
                   <Folder size={20} className="text-purple-400" /> Archivio Progetti ({customCategories.length})
                 </h3>
-                <div className="grid grid-cols-1 gap-6">
+                <div className="flex flex-col gap-4">
                   {customCategories.length === 0 ? (
                     <div className="text-center py-28 text-white/20">
                       <Folder size={64} className="mx-auto mb-6 opacity-5" />
@@ -440,29 +460,43 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
                     </div>
                   ) : (
                     customCategories.map(cat => (
-                      <div key={cat.id} className="flex gap-3 group animate-slide-up">
+                      <div 
+                        key={cat.id} 
+                        className="group relative flex items-center bg-black/40 border border-white/10 rounded-3xl p-4 hover:border-brand-accent/50 hover:bg-black/60 transition-all shadow-lg overflow-hidden animate-slide-up"
+                      >
+                        {/* Area di Caricamento Logo */}
                         <div 
-                          className="flex-1 bg-black/50 border border-white/10 p-5 rounded-3xl flex items-center gap-5 hover:border-brand-accent/50 hover:bg-black/70 transition-all cursor-pointer shadow-lg"
+                          className="flex-1 flex items-center gap-4 cursor-pointer"
                           onClick={() => { applyPreset(cat.id); setActiveTab('editor'); }}
                         >
-                          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center shrink-0 border border-white/5" style={{ color: cat.color }}>
-                            {cat.customImage ? <img src={cat.customImage} className="w-12 h-12 rounded-lg object-cover shadow-md" /> : <div className="scale-125">{BASE_ICONS[cat.iconKey]?.component || <Palette size={28} />}</div>}
+                          <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center shrink-0 border border-white/5" style={{ color: cat.color }}>
+                            {cat.customImage ? (
+                              <img src={cat.customImage} className="w-10 h-10 rounded-lg object-cover shadow-md" alt="Archivio" />
+                            ) : (
+                              <div className="scale-110">{BASE_ICONS[cat.iconKey]?.component || <Palette size={24} />}</div>
+                            )}
                           </div>
                           <div className="overflow-hidden">
                             <p className="text-[11px] font-black text-white uppercase truncate tracking-widest">{cat.name}</p>
                             <p className="text-[9px] font-bold text-white/40 uppercase tracking-[0.2em] mt-1 truncate">{cat.subtitle}</p>
                           </div>
                         </div>
-                        <button 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
-                            deleteCategory(cat.id); 
-                          }} 
-                          className="w-16 bg-red-500/10 hover:bg-red-500/30 border border-white/10 hover:border-red-500/50 text-red-500 flex items-center justify-center rounded-3xl transition-all shadow-xl active:scale-90"
-                          title="Elimina"
-                        >
-                          <Trash2 size={24}/>
-                        </button>
+
+                        {/* Pulsante Eliminazione ISOLATO E ATOMICO */}
+                        <div className="shrink-0 pl-2">
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDelete(cat.id);
+                            }}
+                            className="w-12 h-12 flex items-center justify-center bg-red-500/10 hover:bg-red-500 border border-white/10 hover:border-transparent text-red-500 hover:text-white rounded-2xl transition-all shadow-xl active:scale-90 relative z-[100]"
+                            title="Elimina definitivamente"
+                          >
+                            <Trash2 size={20}/>
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
