@@ -1,7 +1,8 @@
+
 import React, { useState, useRef } from 'react';
 import { ImageFile, AppStatus } from '../types';
 import { editImageWithGemini } from '../services/geminiService';
-import { Upload, Wand2, Download, AlertCircle, RefreshCw, X } from 'lucide-react';
+import { Upload, Wand2, AlertCircle, RefreshCw, X } from 'lucide-react';
 
 const ImageEditor: React.FC = () => {
   const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
@@ -16,7 +17,7 @@ const ImageEditor: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        setError('Per favore carica un file immagine valido (JPG, PNG).');
+        setError('Carica un file immagine valido.');
         return;
       }
 
@@ -49,7 +50,7 @@ const ImageEditor: React.FC = () => {
       setGeneratedImage(result);
       setStatus(AppStatus.COMPLETED);
     } catch (err: any) {
-      setError(err.message || 'Si è verificato un errore.');
+      setError(err.message || 'Errore elaborazione.');
       setStatus(AppStatus.READY_TO_EDIT);
     }
   };
@@ -65,160 +66,78 @@ const ImageEditor: React.FC = () => {
     }
   };
 
-  const downloadImage = () => {
-    if (generatedImage) {
-      const link = document.createElement('a');
-      link.href = generatedImage;
-      link.download = `sek-comix-edit-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
   return (
-    <div className="w-full max-w-5xl mx-auto p-6">
-      
-      {/* Upload Section */}
+    <div className="w-full max-w-5xl mx-auto px-4 mb-6">
+      {/* Upload Section Slim */}
       {status === AppStatus.IDLE && (
         <div 
-          className="border-2 border-dashed border-white/20 rounded-2xl p-12 text-center hover:border-brand-accent/50 hover:bg-white/5 transition-all cursor-pointer group"
+          className="border-2 border-dashed border-white/30 rounded-[2rem] p-6 text-center hover:border-brand-accent/60 hover:bg-white/5 transition-all cursor-pointer group flex items-center justify-center gap-6 bg-black/40 shadow-xl"
           onClick={() => fileInputRef.current?.click()}
         >
-          <div className="w-20 h-20 bg-brand-purple/50 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-            <Upload className="w-10 h-10 text-brand-accent" />
+          <div className="w-14 h-14 bg-brand-accent/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0 shadow-lg border border-brand-accent/30">
+            <Upload className="w-7 h-7 text-brand-accent" />
           </div>
-          <h3 className="text-2xl font-bold mb-2">Carica la tua immagine</h3>
-          <p className="text-gray-400">Clicca per caricare un file JPG o PNG</p>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            accept="image/*" 
-            className="hidden" 
-          />
+          <div className="text-left">
+            <h3 className="text-lg font-black uppercase tracking-tight text-white">Carica Immagine Base</h3>
+            <p className="text-white/60 text-[10px] uppercase font-bold tracking-[0.3em] mt-1">AI Editing Pro • Gemini Powered</p>
+          </div>
+          <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
         </div>
       )}
 
-      {/* Editor Interface */}
+      {/* Editor Interface Compact */}
       {(status !== AppStatus.IDLE) && originalImage && (
-        <div className="space-y-8 animate-fade-in">
-          
-          {/* Controls */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/10">
-             <div className="flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1 w-full">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Descrivi le modifiche (Prompt)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="Es: Aggiungi un filtro retro, Rimuovi lo sfondo..."
-                      className="w-full bg-black/40 border border-white/20 rounded-xl py-3 px-4 text-white focus:ring-2 focus:ring-brand-accent focus:border-transparent outline-none transition-all placeholder-gray-500"
-                      disabled={status === AppStatus.PROCESSING}
-                    />
-                    <div className="absolute right-3 top-3 text-xs text-gray-500 bg-black/20 px-2 rounded">
-                      Italiano
-                    </div>
-                  </div>
-                </div>
+        <div className="space-y-4 animate-fade-in">
+          <div className="bg-white/10 backdrop-blur-3xl rounded-[2rem] p-4 border border-white/20 shadow-2xl">
+             <div className="flex flex-col md:flex-row gap-3 items-center">
+                <input
+                  type="text"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Descrivi le modifiche AI (es: aggiungi sfondo cosmico)..."
+                  className="flex-1 bg-black/60 border border-white/30 rounded-2xl py-4 px-6 text-sm text-white outline-none focus:border-brand-accent transition-all w-full placeholder:text-white/30"
+                />
                 
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="flex gap-3 shrink-0">
                   <button
                     onClick={handleEdit}
                     disabled={status === AppStatus.PROCESSING || !prompt.trim()}
-                    className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+                    className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-xl active:scale-95 ${
                       status === AppStatus.PROCESSING || !prompt.trim()
-                        ? 'bg-gray-600 cursor-not-allowed opacity-50' 
-                        : 'bg-gradient-to-r from-brand-accent to-brand-accent2 text-white hover:shadow-lg hover:shadow-brand-accent/20 hover:scale-[1.02] active:scale-[0.98]'
+                        ? 'bg-white/10 text-white/30 cursor-not-allowed border border-white/10' 
+                        : 'bg-brand-accent text-black hover:scale-105 shadow-brand-accent/20'
                     }`}
                   >
-                    {status === AppStatus.PROCESSING ? (
-                      <>
-                        <RefreshCw className="w-5 h-5 animate-spin" />
-                        Elaborazione...
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="w-5 h-5" />
-                        Modifica
-                      </>
-                    )}
+                    {status === AppStatus.PROCESSING ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                    {status === AppStatus.PROCESSING ? 'ELABORAZIONE' : 'GENERA MODIFICA'}
                   </button>
-                  
-                  <button
-                    onClick={handleReset}
-                    disabled={status === AppStatus.PROCESSING}
-                    className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors text-gray-300"
-                    title="Ricomincia"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <button onClick={handleReset} className="p-4 bg-white/10 border border-white/20 rounded-2xl hover:bg-red-500/20 hover:text-red-500 transition-all text-white/70 shadow-lg"><X className="w-5 h-5" /></button>
                 </div>
              </div>
-             
-             {error && (
-               <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-3 text-red-200">
-                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                 <span>{error}</span>
-               </div>
-             )}
+             {error && <p className="mt-2 text-[10px] text-red-400 font-black uppercase tracking-widest flex items-center gap-2"><AlertCircle size={14}/> {error}</p>}
           </div>
 
-          {/* Canvas Area */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* Original */}
-            <div className="relative group rounded-2xl overflow-hidden border border-white/10 bg-black/40 aspect-square flex items-center justify-center">
-              <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-gray-300 border border-white/10 z-10">
-                Originale
-              </div>
-              <img 
-                src={originalImage.data} 
-                alt="Original" 
-                className="max-w-full max-h-full object-contain"
-              />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="relative rounded-3xl overflow-hidden border-2 border-white/10 bg-black/60 flex items-center justify-center min-h-[180px] shadow-inner">
+              <img src={originalImage.data} className="max-w-full max-h-[180px] object-contain p-4 transition-transform hover:scale-110 duration-700" />
+              <div className="absolute top-3 left-3 px-3 py-1 bg-black/80 rounded-full text-[9px] font-black text-white/80 uppercase tracking-widest border border-white/20 shadow-lg">Originale</div>
             </div>
-
-            {/* Generated */}
-            <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/40 aspect-square flex items-center justify-center">
-              <div className="absolute top-4 left-4 bg-brand-accent/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-brand-accent border border-brand-accent/30 z-10">
-                AI Gemini Modificata
-              </div>
-              
+            <div className="relative rounded-3xl overflow-hidden border-2 border-white/10 bg-black/60 flex items-center justify-center min-h-[180px] shadow-inner">
               {status === AppStatus.PROCESSING ? (
-                <div className="flex flex-col items-center gap-4 animate-pulse">
-                  <div className="w-16 h-16 border-4 border-brand-accent border-t-transparent rounded-full animate-spin"></div>
-                  <p className="text-gray-400 text-sm font-medium">L'intelligenza artificiale sta lavorando...</p>
+                <div className="animate-pulse flex flex-col items-center gap-3">
+                  <RefreshCw className="animate-spin text-brand-accent" size={32} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-accent">Generazione in corso...</span>
                 </div>
               ) : generatedImage ? (
-                <>
-                  <img 
-                    src={generatedImage} 
-                    alt="Generated" 
-                    className="max-w-full max-h-full object-contain"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={downloadImage}
-                      className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
-                    >
-                      <Download className="w-4 h-4" />
-                      Scarica Immagine
-                    </button>
-                  </div>
-                </>
+                <img src={generatedImage} className="max-w-full max-h-[180px] object-contain p-4 animate-fade-in" />
               ) : (
-                <div className="text-center text-gray-500 p-8">
-                  <Wand2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                  <p>L'immagine modificata apparirà qui</p>
+                <div className="flex flex-col items-center gap-3 opacity-20">
+                  <div className="w-12 h-12 border-2 border-dashed border-white rounded-xl"></div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Preview AI</span>
                 </div>
               )}
+              {generatedImage && <div className="absolute top-3 right-3 px-3 py-1 bg-brand-accent/90 rounded-full text-[9px] font-black text-black uppercase tracking-widest shadow-lg">AI Vision</div>}
             </div>
-
           </div>
         </div>
       )}
