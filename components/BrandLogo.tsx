@@ -18,6 +18,7 @@ interface BrandLogoProps {
   font?: 'orbitron' | 'anton' | 'playfair' | 'montserrat' | 'lobster';
   separatorText?: string;
   iconScale?: number;
+  iconPos?: { x: number; y: number };
   sticker?: string | null;
   stickerConfig?: { x: number; y: number; scale: number };
 }
@@ -47,6 +48,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   font = 'orbitron',
   separatorText = '+',
   iconScale = 1,
+  iconPos = { x: 0, y: 0 },
   sticker = null,
   stickerConfig = { x: 0, y: 0, scale: 1 }
 }) => {
@@ -80,7 +82,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
       <div className={`flex items-center ${config.space} ${selectedFontClass} font-black`}>
         {showIcon && (
-          <div className="relative flex items-center justify-center shrink-0" style={{ transform: `scale(${iconScale})`, transition: 'transform 0.3s ease' }}>
+          <div 
+            className="relative flex items-center justify-center shrink-0" 
+            style={{ 
+              transform: `translate(${iconPos.x}px, ${iconPos.y}px) scale(${iconScale})`, 
+              transition: 'transform 0.1s linear' 
+            }}
+          >
             <div className="absolute inset-0 blur-md opacity-30 rounded-full scale-125" style={{ background: customColor }}></div>
             <div className="relative z-10 flex items-center justify-center">
               {customImageSrc ? (
