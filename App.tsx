@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { BrandLogo } from './components/BrandLogo';
 import ImageEditor from './components/ImageEditor';
 import { BrandKit } from './components/BrandKit';
-import { Sparkles, ShieldCheck, Zap, ArrowRight, Cpu, Layers } from 'lucide-react';
+import { Sparkles, Zap, ArrowRight, Cpu, Layers } from 'lucide-react';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'marketing' | 'design'>('marketing');
@@ -151,7 +151,7 @@ const App: React.FC = () => {
 
         <div className="relative z-10 w-full pt-8 md:pt-14 pb-14">
           <div className="text-center mb-12 px-4 animate-slide-up">
-            <h2 className="text-[11px] font-black uppercase tracking-[0.6em] text-brand-accent mb-3 drop-shadow-[0_0_10px_rgba(0,242,96,0.3)]">Laboratorio di Creazione</h2>
+            <h2 className="text-[11px] font-black uppercase tracking-[0.6em] text-brand-accent mb-3 drop-shadow-[0_0_100px_rgba(0,242,96,0.3)]">Laboratorio di Creazione</h2>
             <div className="w-16 h-1.5 bg-brand-accent mx-auto rounded-full shadow-[0_0_15px_#00f260]"></div>
           </div>
 
