@@ -8,7 +8,7 @@ import { Sparkles, ShieldCheck, Zap, ArrowRight, Cpu, Layers } from 'lucide-reac
 const App: React.FC = () => {
   const [view, setView] = useState<'marketing' | 'design'>('marketing');
   
-  // Stato globale del Brand sincronizzato
+  // Stato globale del Brand sincronizzato per l'editor
   const [brandState, setBrandState] = useState({
     text1: 'SEK',
     text2: 'COMIX',
@@ -40,22 +40,19 @@ const App: React.FC = () => {
           <div className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-brand-accent2 rounded-full animate-ping delay-700 shadow-[0_0_15px_#0575E6]"></div>
         </div>
 
-        {/* LOGO PERSONALE IN ALTO */}
+        {/* LOGO PERSONALE IN ALTO (FISSO) */}
         <div className="relative z-10 animate-fade-in-down">
           <BrandLogo 
             size="lg" 
-            text1={brandState.text1}
-            text2={brandState.text2}
-            subtitle={brandState.subtitle}
-            customColor={brandState.color}
-            customImageSrc={brandState.customImage}
-            font={brandState.font}
-            iconScale={brandState.iconScale * 0.9}
-            iconPos={brandState.iconPos}
-            showIcon={brandState.showIcon}
-            showSeparator={brandState.showSeparator}
-            showSubtitle={brandState.showSubtitle}
-            separatorText={brandState.separatorText}
+            text1="SEK"
+            text2="COMIX"
+            subtitle="STUDIO"
+            customColor="#00f260"
+            font="orbitron"
+            showIcon={true}
+            showSeparator={true}
+            showSubtitle={true}
+            separatorText="+"
             className="scale-90 md:scale-110 drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]" 
           />
         </div>
@@ -67,9 +64,9 @@ const App: React.FC = () => {
             <span className="text-[11px] font-black uppercase tracking-[0.4em] text-brand-accent">CORE NEURALE ATTIVO</span>
           </div>
 
-          <h1 className="text-5xl md:text-[8rem] font-black mb-12 font-brand tracking-tighter leading-none select-none animate-slide-up">
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#ffa500] via-white to-[#f2c94c] uppercase mb-4 text-3xl md:text-5xl drop-shadow-[0_0_40px_rgba(255,165,0,0.3)]">Definiamo la tua</span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent via-white to-brand-accent2 drop-shadow-[0_0_100px_rgba(0,242,96,0.4)]">NUOVA ERA</span>
+          <h1 className="text-5xl md:text-[8rem] font-black mb-12 font-brand leading-none select-none animate-slide-up">
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] via-[#FFFFFF] to-[#FFA500] uppercase mb-4 text-3xl md:text-5xl tracking-[0.2em] drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]">Definiamo la tua</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent via-white to-brand-accent2 tracking-tighter drop-shadow-[0_0_100px_rgba(0,242,96,0.4)]">NUOVA ERA</span>
           </h1>
 
           <div className="max-w-3xl mx-auto space-y-16">
@@ -114,24 +111,21 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-black overflow-x-hidden bg-[#020205] animate-fade-in">
       
-      {/* Header Premium */}
+      {/* Header Premium - Logo Fisso */}
       <header className="sticky top-0 z-50 bg-[#0f0c29]/90 backdrop-blur-xl border-b border-white/10 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-24 flex items-center justify-between">
           <div className="cursor-pointer transition-transform hover:scale-105" onClick={() => setView('marketing')}>
             <BrandLogo 
               size="md" 
-              text1={brandState.text1}
-              text2={brandState.text2}
-              subtitle={brandState.subtitle}
-              customColor={brandState.color}
-              customImageSrc={brandState.customImage}
-              font={brandState.font}
-              iconScale={brandState.iconScale * 0.8}
-              iconPos={brandState.iconPos}
-              showIcon={brandState.showIcon}
-              showSeparator={brandState.showSeparator}
-              showSubtitle={brandState.showSubtitle}
-              separatorText={brandState.separatorText}
+              text1="SEK"
+              text2="COMIX"
+              subtitle="STUDIO"
+              customColor="#00f260"
+              font="orbitron"
+              showIcon={true}
+              showSeparator={true}
+              showSubtitle={true}
+              separatorText="+"
               className="scale-75 md:scale-100 origin-left" 
             />
           </div>
@@ -169,7 +163,7 @@ const App: React.FC = () => {
       <footer className="border-t border-white/10 bg-black/80 backdrop-blur-md py-14 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-10 text-center md:text-left">
           <div className="flex flex-col items-center md:items-start gap-3">
-            <BrandLogo size="sm" showIcon={false} text1={brandState.text1} text2={brandState.text2} className="opacity-60 grayscale brightness-150" />
+            <BrandLogo size="sm" showIcon={false} text1="SEK" text2="COMIX" className="opacity-60 grayscale brightness-150" />
             <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.5em]">L'ERA DIGITALE È QUI</p>
           </div>
           
