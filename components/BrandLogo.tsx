@@ -3,6 +3,7 @@ import React from 'react';
 import { Palette, Sparkles, Flame, Zap, Star, Heart, Rocket } from 'lucide-react';
 
 interface BrandLogoProps {
+  id?: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showIcon?: boolean;
@@ -24,15 +25,16 @@ interface BrandLogoProps {
 }
 
 const STICKER_MAP: Record<string, any> = {
-  sparkles: <Sparkles className="animate-pulse" />,
-  flame: <Flame className="animate-bounce" />,
+  sparkles: <Sparkles />,
+  flame: <Flame />,
   zap: <Zap />,
-  star: <Star className="animate-spin-slow" />,
+  star: <Star />,
   heart: <Heart />,
   rocket: <Rocket />
 };
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({ 
+  id,
   className = '', 
   size = 'md',
   showIcon = true,
@@ -52,14 +54,28 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   sticker = null,
   stickerConfig = { x: 0, y: 0, scale: 1 }
 }) => {
-  const sizeConfig = {
-    sm: { text: 'text-lg', icon: 18, space: 'gap-2', sub: 'text-[0.45rem]', imgSize: 'w-5 h-5', sep: 'text-xs', stickerSize: 14 },
-    md: { text: 'text-2xl', icon: 26, space: 'gap-3', sub: 'text-[0.55rem]', imgSize: 'w-8 h-8', sep: 'text-sm', stickerSize: 20 },
-    lg: { text: 'text-4xl', icon: 40, space: 'gap-4', sub: 'text-xl', imgSize: 'w-12 h-12', sep: 'text-xl', stickerSize: 32 },
-    xl: { text: 'text-6xl', icon: 64, space: 'gap-6', sub: 'text-sm', imgSize: 'w-20 h-20', sep: 'text-4xl', stickerSize: 48 },
+  // Definizione di una scala matematica per mantenere le proporzioni perfette
+  const scaleMap = {
+    sm: 0.6,
+    md: 1.0,
+    lg: 2.2,
+    xl: 4.5
   };
 
-  const config = sizeConfig[size];
+  const currentScale = scaleMap[size];
+  
+  // Calcolo delle dimensioni basato sulla scala
+  const baseFontSize = 32 * currentScale;
+  const iconBaseSize = 36 * currentScale;
+  const gapSize = 16 * currentScale;
+  
+  // MIGLIORAMENTO LEGGIBILITÀ TAGLINE:
+  // Aumentato il rapporto dal 28% al 38% e aggiunto un minimo di 11px per mobile.
+  const taglineSize = Math.max(baseFontSize * 0.38, 11); 
+  const taglineMargin = 14 * currentScale;
+  const separatorMargin = 16 * currentScale;
+  const stickerBaseSize = 24 * currentScale;
+
   const baseTextColor = theme === 'dark' ? '#ffffff' : '#0f0c29';
 
   const fontClassMap = {
@@ -73,66 +89,110 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const selectedFontClass = fontClassMap[font] || fontClassMap['orbitron'];
 
   return (
-    <div id="brand-logo-preview" className={`flex flex-col ${className} select-none group relative transition-all duration-300`}>
+    <div 
+      id={id} 
+      className={`flex flex-col items-center justify-center ${className} select-none relative transition-all duration-300`}
+      style={{ 
+        overflow: 'visible', 
+        padding: `${25 * currentScale}px`, 
+        minWidth: 'max-content',
+        width: 'fit-content'
+      }}
+    >
+      {/* Sticker Layer */}
       {sticker && STICKER_MAP[sticker] && (
-        <div className="absolute z-20 pointer-events-none" style={{ color: customColor, left: `calc(50% + ${stickerConfig.x}px)`, top: `calc(50% + ${stickerConfig.y}px)`, transform: `translate(-50%, -50%) scale(${stickerConfig.scale})`, filter: `drop-shadow(0 0 10px ${customColor}88)` }}>
-          {React.cloneElement(STICKER_MAP[sticker], { size: config.stickerSize })}
+        <div 
+          className="absolute z-20 pointer-events-none" 
+          style={{ 
+            color: customColor, 
+            left: `calc(50% + ${stickerConfig.x * currentScale}px)`, 
+            top: `calc(50% + ${stickerConfig.y * currentScale}px)`, 
+            transform: `translate(-50%, -50%) scale(${stickerConfig.scale * currentScale})`, 
+            filter: `drop-shadow(0 0 ${10 * currentScale}px ${customColor}88)` 
+          }}
+        >
+          {React.cloneElement(STICKER_MAP[sticker], { size: stickerBaseSize })}
         </div>
       )}
 
-      <div className={`flex items-center ${config.space} ${selectedFontClass} font-black`}>
+      {/* Main Row: Icon + Texts */}
+      <div 
+        className={`flex items-center ${selectedFontClass} font-black`} 
+        style={{ 
+          gap: `${gapSize}px`,
+          fontSize: `${baseFontSize}px`,
+          overflow: 'visible' 
+        }}
+      >
         {showIcon && (
           <div 
             className="relative flex items-center justify-center shrink-0" 
             style={{ 
-              transform: `translate(${iconPos.x}px, ${iconPos.y}px) scale(${iconScale})`, 
-              transition: 'transform 0.1s linear' 
+              transform: `translate(${iconPos.x * currentScale}px, ${iconPos.y * currentScale}px) scale(${iconScale})`, 
+              width: `${iconBaseSize}px`,
+              height: `${iconBaseSize}px`,
+              transition: 'transform 0.1s linear',
+              overflow: 'visible'
             }}
           >
-            <div className="absolute inset-0 blur-md opacity-30 rounded-full scale-125" style={{ background: customColor }}></div>
+            <div 
+              className="absolute inset-0 blur-xl opacity-30 rounded-full scale-150" 
+              style={{ background: customColor }}
+            ></div>
             <div className="relative z-10 flex items-center justify-center">
               {customImageSrc ? (
-                <div className="relative flex items-center justify-center">
-                  <img 
-                    src={customImageSrc} 
-                    alt="Brand Icon" 
-                    className={`${config.imgSize} object-contain transition-all duration-300`} 
-                    style={{ 
-                      mixBlendMode: 'screen',
-                      filter: `brightness(1.4) drop-shadow(0 0 4px ${customColor})`,
-                    }}
-                  />
-                  <div 
-                    className="absolute inset-0 pointer-events-none opacity-20 mix-blend-color rounded-lg"
-                    style={{ backgroundColor: customColor }}
-                  ></div>
-                </div>
+                <img 
+                  src={customImageSrc} 
+                  alt="Icon" 
+                  crossOrigin="anonymous"
+                  style={{ 
+                    width: `${iconBaseSize}px`, 
+                    height: `${iconBaseSize}px`,
+                    objectFit: 'contain',
+                    filter: `brightness(1.2) drop-shadow(0 0 ${6 * currentScale}px ${customColor})`,
+                  }}
+                />
               ) : (
-                <div style={{ color: customColor }}>{customIcon || <Palette size={config.icon} strokeWidth={2.5} />}</div>
+                <div style={{ color: customColor }}>
+                  {customIcon ? React.cloneElement(customIcon as React.ReactElement<{ size?: number }>, { size: iconBaseSize }) : <Palette size={iconBaseSize} strokeWidth={2.5} />}
+                </div>
               )}
             </div>
           </div>
         )}
-        <div className={`${config.text} flex items-center whitespace-nowrap leading-none`}>
-          <span className="drop-shadow-lg uppercase" style={{ color: baseTextColor }}>{text1}</span>
+        
+        <div className="flex items-center whitespace-nowrap leading-none uppercase" style={{ overflow: 'visible' }}>
+          <span className="drop-shadow-2xl" style={{ color: baseTextColor }}>{text1}</span>
           
-          {showSeparator ? (
+          {showSeparator && (
             <span 
-              className={`mx-3 font-black ${config.sep} ${separatorText && separatorText.length > 1 ? 'px-2' : ''}`} 
-              style={{ color: customColor }}
+              className="font-black" 
+              style={{ 
+                color: customColor,
+                margin: `0 ${separatorMargin}px`,
+                fontSize: `${baseFontSize * 0.8}px`
+              }}
             >
               {separatorText === ' ' ? '\u00A0' : separatorText}
             </span>
-          ) : (
-            <span className="mx-2">&nbsp;</span>
           )}
 
-          <span className="bg-clip-text text-transparent bg-gradient-to-r uppercase" style={{ backgroundImage: `linear-gradient(to right, ${customColor}, #0575E6)` }}>{text2}</span>
+          <span style={{ color: customColor }}>{text2}</span>
         </div>
       </div>
       
+      {/* Subtitle Row: Tagline (Terza Casella) */}
       {subtitle && showSubtitle && (
-         <div className={`${config.sub} font-sans font-black tracking-[0.4em] uppercase mt-1 text-right italic`} style={{ color: customColor }}>
+         <div 
+           className="font-sans font-black uppercase text-center italic opacity-100 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] whitespace-nowrap" 
+           style={{ 
+             color: customColor,
+             fontSize: `${taglineSize}px`,
+             marginTop: `${taglineMargin}px`,
+             letterSpacing: `${0.35 * currentScale}em`, // Tracking ottimizzato
+             width: '100%'
+           }}
+         >
            {subtitle}
          </div>
       )}
