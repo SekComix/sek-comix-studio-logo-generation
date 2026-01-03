@@ -8,7 +8,8 @@ import {
   ShoppingCart, Leaf, Utensils, Zap, Crown, Folder,
   Rocket, Layout, Image as ImageIcon, Star, Flame, Plane, 
   Dumbbell, Book, Home, Car, ChevronDown, ChevronRight, 
-  Settings2, Fingerprint, Eye, EyeOff, Save, Move
+  Settings2, Fingerprint, Eye, EyeOff, Save, Move,
+  XCircle, Type as TypeIcon
 } from 'lucide-react';
 
 declare global {
@@ -80,6 +81,17 @@ const BG_PRESETS = [
   { name: 'Antracite', hex: '#1f2937', theme: 'dark' },
   { name: 'Grigio', hex: '#e5e7eb', theme: 'light' },
   { name: 'White', hex: '#ffffff', theme: 'light' },
+];
+
+const SEPARATOR_PRESETS = [
+  { label: 'Più (+)', value: '+' },
+  { label: 'E (&)', value: '&' },
+  { label: 'Pipe (|)', value: '|' },
+  { label: 'Slash (/)', value: '/' },
+  { label: 'Punto (•)', value: '•' },
+  { label: 'Stella (*)', value: '*' },
+  { label: 'Trattino (-)', value: '-' },
+  { label: 'Spazio Vuoto', value: ' ' },
 ];
 
 interface CustomCategory {
@@ -160,7 +172,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
     setIsExporting(true);
     
     try {
-      // Per il download usiamo una scala basata sul pixelSize desiderato
       const captureScale = pixelSize / element.offsetWidth;
 
       const canvas = await window.html2canvas(element, {
@@ -171,19 +182,16 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
         onclone: (clonedDoc: Document) => {
           const clonedElement = clonedDoc.getElementById('active-logo-canvas');
           if (clonedElement) {
-            // Rimuoviamo ogni vincolo di contenitore e lo scaling visuale nel clone
             clonedElement.style.width = "fit-content";
             clonedElement.style.height = "fit-content";
             clonedElement.style.position = "static";
             clonedElement.style.transform = "none";
-            // Rimuoviamo il wrapper di scaling visuale se presente nel clone
             const parent = clonedElement.parentElement;
             if (parent && parent.id === 'preview-scaler') {
               parent.style.transform = 'none';
               parent.style.width = 'fit-content';
               parent.style.height = 'fit-content';
             }
-            // Padding extra dinamico per le ombre neon basato sulla taglia reale
             const safePadding = logoSize === 'xl' ? 200 : logoSize === 'lg' ? 100 : 40;
             clonedElement.style.padding = `${safePadding}px`;
             clonedElement.style.display = "flex";
@@ -227,7 +235,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
     </button>
   );
 
-  // Calcolo dello scaling visuale per l'anteprima (per non far uscire il logo XL dai bordi)
   const getVisualPreviewScale = () => {
     if (logoSize === 'xl') return 0.22;
     if (logoSize === 'lg') return 0.45;
@@ -252,18 +259,93 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
               <SidebarHeader title="Identità" icon={Fingerprint} section="identity" />
               {activeSubSection === 'identity' && (
                 <div className="bg-[#1a1638] p-6 rounded-2xl border border-white/10 space-y-4 animate-slide-up">
-                  <div className="space-y-2">
-                    <label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Scegli Preset</label>
-                    <select onChange={(e) => applyPreset(e.target.value)} className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none">
-                      <option value="">Seleziona...</option>
-                      {PRESET_CATEGORIES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                  
+                  {/* Gestione Icona */}
+                  <div className="space-y-3 pb-4 border-b border-white/10">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Icona Intestazione</label>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setGlobalState({...globalState, showIcon: !globalState.showIcon})}
+                          className={`p-1.5 rounded-lg transition-all ${globalState.showIcon ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}
+                          title="Mostra/Nascondi Icona"
+                        >
+                          {globalState.showIcon ? <Eye size={14}/> : <EyeOff size={14}/>}
+                        </button>
+                        {(globalState.customImage || globalState.iconKey !== 'palette') && (
+                          <button 
+                            onClick={() => setGlobalState({...globalState, customImage: null, iconKey: 'palette'})}
+                            className="p-1.5 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-all"
+                            title="Reset Icona"
+                          >
+                            <RefreshCw size={14}/>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <select value={globalState.iconKey} onChange={(e) => applyPreset(e.target.value)} className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none">
+                      <option value="">Cambia Preset Icona...</option>
+                      {PRESET_CATEGORIES.map(p => <option key={p.id} value={p.iconKey}>{p.label}</option>)}
+                      {Object.keys(BASE_ICONS).map(k => <option key={k} value={k}>{BASE_ICONS[k].label}</option>)}
                     </select>
                   </div>
+
                   <div className="flex gap-2">
                     <input type="text" value={globalState.text1} onChange={(e) => setGlobalState({...globalState, text1: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-white" placeholder="TESTO 1" />
                     <input type="text" value={globalState.text2} onChange={(e) => setGlobalState({...globalState, text2: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-white" placeholder="TESTO 2" />
                   </div>
-                  <input type="text" value={globalState.subtitle} onChange={(e) => setGlobalState({...globalState, subtitle: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-xs text-brand-accent" placeholder="TAGLINE / TRIGGER" />
+
+                  {/* Gestione Separatore - Ripristinato Dropdown */}
+                  <div className="space-y-3 pb-4 border-b border-white/10">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Separatore</label>
+                      <button 
+                        onClick={() => setGlobalState({...globalState, showSeparator: !globalState.showSeparator})}
+                        className={`p-1.5 rounded-lg transition-all ${globalState.showSeparator ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}
+                        title="Mostra/Nascondi Separatore"
+                      >
+                        {globalState.showSeparator ? <Eye size={14}/> : <EyeOff size={14}/>}
+                      </button>
+                    </div>
+                    <select 
+                      value={globalState.separatorText} 
+                      onChange={(e) => setGlobalState({...globalState, separatorText: e.target.value, showSeparator: true})}
+                      className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none"
+                    >
+                      {SEPARATOR_PRESETS.map(sep => (
+                        <option key={sep.value} value={sep.value}>{sep.label}</option>
+                      ))}
+                      {!SEPARATOR_PRESETS.some(s => s.value === globalState.separatorText) && (
+                        <option value={globalState.separatorText}>Custom: {globalState.separatorText}</option>
+                      )}
+                    </select>
+                  </div>
+
+                  {/* Gestione Tagline / Trigger */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Tagline / Trigger</label>
+                      <div className="flex gap-2">
+                         <button 
+                            onClick={() => setGlobalState({...globalState, showSubtitle: !globalState.showSubtitle})}
+                            className={`p-1.5 rounded-lg transition-all ${globalState.showSubtitle ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}
+                            title="Mostra/Nascondi Trigger"
+                          >
+                            {globalState.showSubtitle ? <Eye size={14}/> : <EyeOff size={14}/>}
+                          </button>
+                          {globalState.subtitle && (
+                            <button 
+                              onClick={() => setGlobalState({...globalState, subtitle: ''})}
+                              className="p-1.5 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-all"
+                              title="Cancella Trigger"
+                            >
+                              <Trash2 size={14}/>
+                            </button>
+                          )}
+                      </div>
+                    </div>
+                    <input type="text" value={globalState.subtitle} onChange={(e) => setGlobalState({...globalState, subtitle: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-xs text-brand-accent" placeholder="SCRIVI QUI..." />
+                  </div>
                 </div>
               )}
               
@@ -286,6 +368,7 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
                       </div>
                       <div className="space-y-2">
                         <span className="text-[9px] font-black text-white/30 uppercase">Pos Y</span>
+                        <input type="range" min="-100" max="100" value={globalState.iconPos.y} onChange={(e) => setGlobalState({...globalState, iconPos: {...globalState.iconPos, x: parseInt(e.target.value)}})} className="w-full accent-brand-accent bg-white/10 h-1" />
                         <input type="range" min="-100" max="100" value={globalState.iconPos.y} onChange={(e) => setGlobalState({...globalState, iconPos: {...globalState.iconPos, y: parseInt(e.target.value)}})} className="w-full accent-brand-accent bg-white/10 h-1" />
                       </div>
                     </div>
@@ -357,7 +440,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
             )}
 
             <div className="flex items-center justify-center w-full h-full relative" style={{ overflow: 'visible' }}>
-              {/* Wrapper di Scaling Visuale per mantenere il logo XL dentro i bordi del box */}
               <div 
                 id="preview-scaler"
                 style={{ 
