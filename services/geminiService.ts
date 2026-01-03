@@ -12,7 +12,7 @@ const handleApiError = (error: any) => {
   }
   
   if (error.message?.includes("API_KEY") || error.status === 403) {
-    throw new Error("Chiave API non valida o non configurata correttamente nei Secrets di GitHub.");
+    throw new Error("Chiave API non valida o non configurata correttamente.");
   }
 
   throw new Error(error.message || "Si è verificato un errore imprevisto durante la generazione.");
@@ -57,7 +57,7 @@ export const editImageWithGemini = async (
     
     if (parts) {
       for (const part of parts) {
-        if (part.inlineData && part.inlineData.data) {
+        if (part.inlineData?.data) {
           return `data:image/png;base64,${part.inlineData.data}`;
         }
       }
@@ -74,10 +74,6 @@ export const editImageWithGemini = async (
  * Genera un'icona personalizzata utilizzando il colore del brand scelto dall'utente.
  */
 export const generateIconImage = async (prompt: string, brandColor: string): Promise<string> => {
-  if (!process.env.API_KEY || process.env.API_KEY === 'undefined' || process.env.API_KEY === '') {
-    throw new Error("Chiave API mancante. Configura 'API_KEY' nei Secrets di GitHub.");
-  }
-
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
@@ -86,11 +82,11 @@ export const generateIconImage = async (prompt: string, brandColor: string): Pro
       contents: {
         parts: [
           {
-            text: `Professional app icon, minimalist and clean. 
+            text: `Professional app icon, minimalist and high-quality vector style. 
                    Subject: ${prompt}. 
                    Primary Color: ${brandColor}. 
-                   Background: PURE BLACK (#000000). 
-                   Style: Flat vector with elegant neon glow, centered, 2D style.`
+                   Background: Solid BLACK (#000000). 
+                   Style: Elegant glow, centered composition, clean 2D design. No text.`
           }
         ]
       },
@@ -104,12 +100,12 @@ export const generateIconImage = async (prompt: string, brandColor: string): Pro
     const parts = response.candidates?.[0]?.content?.parts;
     if (parts) {
       for (const part of parts) {
-        if (part.inlineData && part.inlineData.data) {
+        if (part.inlineData?.data) {
           return `data:image/png;base64,${part.inlineData.data}`;
         }
       }
     }
-    throw new Error("Impossibile generare l'icona.");
+    throw new Error("Il modello non ha restituito un'immagine. Prova con un prompt più semplice.");
   } catch (error: any) {
     return handleApiError(error);
   }
