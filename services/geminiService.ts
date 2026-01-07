@@ -1,119 +1,56 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-/**
- * RECUPERO CHIAVE SICURO PER VITE
- */
 const getApiKey = (): string => {
   // @ts-ignore
   return import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.API_KEY || "";
 };
 
-/**
- * Gestore centralizzato degli errori API
- */
 const handleApiError = (error: any) => {
   console.error("Errore API Gemini:", error);
-  
-  if (error.message?.includes("429") || error.status === 429) {
-    throw new Error("Quota superata: Google ha limitato le richieste. Attendi un minuto e riprova.");
-  }
-  
-  if (error.message?.includes("API_KEY") || error.status === 403 || error.message?.includes("missing")) {
-    throw new Error("Chiave API non valida o non configurata nei Secrets di GitHub.");
-  }
-
-  throw new Error(error.message || "Si è verificato un errore imprevisto durante la generazione.");
+  if (error.message?.includes("429")) throw new Error("Quota superata. Attendi un minuto.");
+  if (error.message?.includes("API_KEY")) throw new Error("Chiave API non valida.");
+  throw new Error(error.message || "Errore imprevisto.");
 };
 
-/**
- * Modifica un'immagine esistente basandosi su un prompt testuale.
- */
-export const editImageWithGemini = async (
-  base64Image: string,
-  mimeType: string,
-  prompt: string
-): Promise<string> => {
+export const editImageWithGemini = async (base64Image: string, mimeType: string, prompt: string): Promise<string> => {
   const apiKey = getApiKey();
   const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1' });
-
   try {
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
-
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash', // Modello stabile 2026
+      model: 'gemini-2.0-flash', 
       contents: [{
         role: 'user',
-        parts: [
-          {
-            inlineData: {
-              data: cleanBase64,
-              mimeType: mimeType,
-            },
-          },
-          {
-            text: `Modifica questa immagine seguendo questo stile: ${prompt}`,
-          },
-        ],
-      }],
-      config: { temperature: 0.7 }
+        parts: [{ inlineData: { data: cleanBase64, mimeType } }, { text: `Modifica l'immagine: ${prompt}` }]
+      }]
     });
-
     // @ts-ignore
-    const parts = response.candidates?.[0]?.content?.parts;
-    
-    if (parts) {
-      for (const part of parts) {
-        if (part.inlineData?.data) {
-          return `data:image/png;base64,${part.inlineData.data}`;
-        }
-      }
-    }
-
-    throw new Error("Nessuna immagine generata. Assicurati che il tuo account abbia i permessi per Imagen 3.");
-
-  } catch (error: any) {
-    return handleApiError(error);
-  }
+    const data = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+    if (data) return `data:image/png;base64,${data}`;
+    throw new Error("L'AI ha risposto con testo invece di un'immagine. Motivo: " + response.text);
+  } catch (error: any) { return handleApiError(error); }
 };
 
-/**
- * Genera un'icona personalizzata utilizzando il colore del brand scelto dall'utente.
- */
 export const generateIconImage = async (prompt: string, brandColor: string): Promise<string> => {
   const apiKey = getApiKey();
   const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1' });
-
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash', // Modello stabile 2026
+      model: 'gemini-2.0-flash',
       contents: [{
         role: 'user',
-        parts: [
-          {
-            text: `Genera l'immagine di un'icona app professionale, stile vettoriale minimalista. 
-                   Soggetto: ${prompt}. 
-                   Colore primario: ${brandColor}. 
-                   Sfondo: Nero solido (#000000). 
-                   Stile: Design 2D pulito, senza testo.`
-          }
-        ]
-      }],
-      config: { temperature: 0.7 }
+        parts: [{
+          text: `GENERATE_IMAGE: Crea un'icona app professionale. Soggetto: ${prompt}. Colore: ${brandColor}. Sfondo nero. Stile minimal 2D. Non inserire testo.`
+        }]
+      }]
     });
-
     // @ts-ignore
-    const parts = response.candidates?.[0]?.content?.parts;
-    if (parts) {
-      for (const part of parts) {
-        if (part.inlineData?.data) {
-          return `data:image/png;base64,${part.inlineData.data}`;
-        }
-      }
-    }
-    throw new Error("Il modello non ha restituito un'immagine. Prova con un prompt più semplice.");
-  } catch (error: any) {
-    return handleApiError(error);
-  }
+    const data = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+    if (data) return `data:image/png;base64,${data}`;
+    
+    // Se non c'è l'immagine, mostriamo cosa ha detto l'AI invece di un errore generico
+    throw new Error("L'AI non può generare immagini in questo momento. Risposta: " + response.text);
+  } catch (error: any) { return handleApiError(error); }
 };
 
 export interface BrandIdentityResult {
@@ -125,27 +62,15 @@ export interface BrandIdentityResult {
 export const generateBrandIdentity = async (description: string): Promise<BrandIdentityResult> => {
   const apiKey = getApiKey();
   const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1' });
-
   try {
-    // Chiediamo il JSON nel prompt per evitare l'errore 400
-    const prompt = `
-      Expert Brand Identity analysis.
-      User app description: "${description}".
-      Icon options: ['palette', 'utensils', 'camera', 'heart', 'code', 'music', 'dumbbell', 'briefcase', 'plane', 'gamepad', 'shopping-cart', 'book', 'car', 'home', 'leaf'].
-      Ritorna SOLO un oggetto JSON con: iconKey, colorHex (stile neon) e subtitle (max 15 char).
-    `;
-
+    const prompt = `Analisi Brand Identity per: "${description}". Ritorna JSON: { "iconKey": "palette", "colorHex": "#00f260", "subtitle": "LOGO" }. Usa icone standard lucide.`;
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash', // Modello stabile 2026
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      config: { temperature: 0.7 }
+      model: 'gemini-2.0-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
-
-    // Pulizia markdown se presente
     const cleanText = (response.text || "").replace(/```json|```/g, "").trim();
     return JSON.parse(cleanText) as BrandIdentityResult;
   } catch (error) {
-    console.error("Errore generazione Brand Identity:", error);
     return { iconKey: 'palette', colorHex: '#00f260', subtitle: 'STUDIO' };
   }
 };
