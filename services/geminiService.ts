@@ -7,50 +7,72 @@ const getApiKey = (): string => {
 
 const handleApiError = (error: any) => {
   console.error("Errore API Gemini:", error);
-  if (error.message?.includes("429")) throw new Error("Quota superata. Attendi un minuto.");
+  if (error.message?.includes("429")) throw new Error("Quota superata. Riprova tra un minuto.");
   if (error.message?.includes("API_KEY")) throw new Error("Chiave API non valida.");
   throw new Error(error.message || "Errore imprevisto.");
 };
 
-export const editImageWithGemini = async (base64Image: string, mimeType: string, prompt: string): Promise<string> => {
-  const apiKey = getApiKey();
-  const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1' });
-  try {
-    const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash', 
-      contents: [{
-        role: 'user',
-        parts: [{ inlineData: { data: cleanBase64, mimeType } }, { text: `Modifica l'immagine: ${prompt}` }]
-      }]
-    });
-    // @ts-ignore
-    const data = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-    if (data) return `data:image/png;base64,${data}`;
-    throw new Error("L'AI ha risposto con testo invece di un'immagine. Motivo: " + response.text);
-  } catch (error: any) { return handleApiError(error); }
-};
-
+/**
+ * Genera un'icona/logo in formato SVG (Metodo infallibile per evitare blocchi)
+ */
 export const generateIconImage = async (prompt: string, brandColor: string): Promise<string> => {
   const apiKey = getApiKey();
   const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1' });
+
   try {
-    const response = await ai.models.generateContent({
+    const aiPrompt = `Sei un grafico esperto in icone minimaliste. 
+    Crea il codice SVG per un'icona app professionale.
+    SOGGETTO: ${prompt}
+    COLORE PRINCIPALE: ${brandColor}
+    STILE: Minimalista, moderno, vettoriale, centrato.
+    SFONDO: Nero solido.
+    REQUISITO TECNICO: Restituisci SOLO il codice <svg>...</svg> senza commenti o spiegazioni.`;
+
+    const result = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
-      contents: [{
-        role: 'user',
-        parts: [{
-          text: `GENERATE_IMAGE: Crea un'icona app professionale. Soggetto: ${prompt}. Colore: ${brandColor}. Sfondo nero. Stile minimal 2D. Non inserire testo.`
-        }]
-      }]
+      contents: [{ role: 'user', parts: [{ text: aiPrompt }] }],
+      config: { temperature: 0.5 }
     });
-    // @ts-ignore
-    const data = response.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-    if (data) return `data:image/png;base64,${data}`;
-    
-    // Se non c'è l'immagine, mostriamo cosa ha detto l'AI invece di un errore generico
-    throw new Error("L'AI non può generare immagini in questo momento. Risposta: " + response.text);
-  } catch (error: any) { return handleApiError(error); }
+
+    const svgCode = (result.text || "").replace(/```xml|```html|```svg|```/g, "").trim();
+
+    if (svgCode.includes("<svg")) {
+      // Trasformiamo il codice SVG in un'immagine leggibile dal browser
+      const base64Svg = btoa(unescape(encodeURIComponent(svgCode)));
+      return `data:image/svg+xml;base64,${base64Svg}`;
+    }
+
+    throw new Error("L'AI non ha generato un codice grafico valido. Riprova.");
+
+  } catch (error: any) {
+    return handleApiError(error);
+  }
+};
+
+/**
+ * Analisi della Brand Identity (JSON)
+ */
+export const generateBrandIdentity = async (description: string): Promise<BrandIdentityResult> => {
+  const apiKey = getApiKey();
+  const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1' });
+
+  try {
+    const prompt = `Analizza questa descrizione: "${description}". 
+    Ritorna un JSON con: iconKey (un nome di icona Lucide), colorHex (colore neon), subtitle (max 15 caratteri).
+    Esempio: {"iconKey": "camera", "colorHex": "#00f260", "subtitle": "PHOTO STUDIO"}`;
+
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      config: { temperature: 0.7 }
+    });
+
+    const cleanJson = (result.text || "").replace(/```json|```/g, "").trim();
+    return JSON.parse(cleanJson);
+  } catch (error) {
+    console.error("Errore identità:", error);
+    return { iconKey: 'palette', colorHex: '#00f260', subtitle: 'STUDIO' };
+  }
 };
 
 export interface BrandIdentityResult {
@@ -59,18 +81,7 @@ export interface BrandIdentityResult {
   subtitle: string;
 }
 
-export const generateBrandIdentity = async (description: string): Promise<BrandIdentityResult> => {
-  const apiKey = getApiKey();
-  const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1' });
-  try {
-    const prompt = `Analisi Brand Identity per: "${description}". Ritorna JSON: { "iconKey": "palette", "colorHex": "#00f260", "subtitle": "LOGO" }. Usa icone standard lucide.`;
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: [{ role: 'user', parts: [{ text: prompt }] }]
-    });
-    const cleanText = (response.text || "").replace(/```json|```/g, "").trim();
-    return JSON.parse(cleanText) as BrandIdentityResult;
-  } catch (error) {
-    return { iconKey: 'palette', colorHex: '#00f260', subtitle: 'STUDIO' };
-  }
+// Funzione vuota di backup per non rompere il resto dell'app
+export const editImageWithGemini = async (b: string, m: string, p: string): Promise<string> => {
+  throw new Error("La modifica immagini non è ancora supportata nella versione stabile.");
 };
