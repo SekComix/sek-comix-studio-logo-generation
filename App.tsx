@@ -1,63 +1,84 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrandLogo } from './components/BrandLogo';
 import ImageEditor from './components/ImageEditor';
 import { BrandKit } from './components/BrandKit';
 import { Sparkles, Zap, ArrowRight, Cpu, Layers } from 'lucide-react';
 
+const STUDIO_IDENTITY_KEY = 'sek_studio_identity_v1';
+
+const DEFAULT_STUDIO_BRAND = {
+  text1: 'SEK',
+  text2: 'COMIX',
+  subtitle: 'STUDIO',
+  color: '#00f260',
+  iconKey: 'palette',
+  customImage: null as string | null,
+  font: 'orbitron' as any,
+  iconScale: 1,
+  iconPos: { x: 0, y: 0 },
+  showIcon: true,
+  showSeparator: true,
+  showSubtitle: true,
+  separatorText: '+'
+};
+
 const App: React.FC = () => {
   const [view, setView] = useState<'marketing' | 'design'>('marketing');
   
-  // Stato globale del Brand sincronizzato per l'editor
-  const [brandState, setBrandState] = useState({
-    text1: 'SEK',
-    text2: 'COMIX',
-    subtitle: 'STUDIO',
-    color: '#00f260',
-    iconKey: 'palette',
-    customImage: null as string | null,
-    font: 'orbitron' as any,
-    iconScale: 1,
-    iconPos: { x: 0, y: 0 },
-    showIcon: true,
-    showSeparator: true,
-    showSubtitle: true,
-    separatorText: '+'
+  // Stato 1: IDENTITÀ DELLO STUDIO (Fissa e Persistente)
+  const [studioBrand, setStudioBrand] = useState(DEFAULT_STUDIO_BRAND);
+
+  // Stato 2: WORKSPACE DI LAVORO (Dinamico per i clienti)
+  const [workspaceState, setWorkspaceState] = useState({
+    ...DEFAULT_STUDIO_BRAND,
+    text1: 'NUOVO',
+    text2: 'LOGO',
+    subtitle: 'CLIENTE'
   });
+
+  // Caricamento dell'identità dello studio all'avvio
+  useEffect(() => {
+    const savedIdentity = localStorage.getItem(STUDIO_IDENTITY_KEY);
+    if (savedIdentity) {
+      try {
+        setStudioBrand(JSON.parse(savedIdentity));
+      } catch (e) {
+        console.error("Errore caricamento identità studio", e);
+      }
+    }
+  }, []);
+
+  // Funzione per aggiornare l'identità dell'app (chiamata dal BrandKit)
+  const handleUpdateStudioIdentity = (newIdentity: any) => {
+    const updated = {
+      ...newIdentity,
+      text1: newIdentity.text1 || 'SEK',
+      text2: newIdentity.text2 || 'COMIX'
+    };
+    setStudioBrand(updated);
+    localStorage.setItem(STUDIO_IDENTITY_KEY, JSON.stringify(updated));
+  };
 
   if (view === 'marketing') {
     return (
       <div className="min-h-screen bg-[#020205] text-white flex flex-col items-center justify-between relative overflow-hidden font-sans py-12">
-        {/* Sfondo Animato Cinematografico */}
         <div className="absolute inset-0 z-0">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-brand-accent/10 rounded-full blur-[180px] animate-pulse"></div>
           <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-brand-accent2/10 rounded-full blur-[150px]"></div>
-          
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 brightness-75"></div>
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_70%,transparent_100%)]"></div>
-          
           <div className="absolute top-1/4 left-1/3 w-1.5 h-1.5 bg-brand-accent rounded-full animate-ping shadow-[0_0_15px_#00f260]"></div>
           <div className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-brand-accent2 rounded-full animate-ping delay-700 shadow-[0_0_15px_#0575E6]"></div>
         </div>
 
-        {/* LOGO PERSONALE IN ALTO (FISSO) */}
         <div className="relative z-10 animate-fade-in-down">
           <BrandLogo 
+            {...studioBrand}
             size="lg" 
-            text1="SEK"
-            text2="COMIX"
-            subtitle="STUDIO"
-            customColor="#00f260"
-            font="orbitron"
-            showIcon={true}
-            showSeparator={true}
-            showSubtitle={true}
-            separatorText="+"
             className="scale-90 md:scale-110 drop-shadow-[0_0_30px_rgba(255,255,255,0.2)]" 
           />
         </div>
 
-        {/* CONTENUTO CENTRALE HERO */}
         <div className="relative z-10 text-center px-6 max-w-5xl">
           <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-brand-accent/20 border border-brand-accent/40 mb-10 animate-fade-in">
             <Cpu size={14} className="text-brand-accent animate-spin-slow" />
@@ -95,10 +116,9 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* BARRA INFO IN BASSO */}
         <div className="relative z-10 w-full max-w-7xl px-8 flex flex-col md:flex-row justify-between items-center gap-4 opacity-60">
           <div className="flex gap-4 items-center">
-            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white">Sek Comix Vision Studio</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-white">{studioBrand.text1} {studioBrand.text2} VISION STUDIO</span>
           </div>
           <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.5em] text-brand-accent">
             <Sparkles size={12} /> Powered by Gemini Ultra Engine
@@ -111,21 +131,13 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-black overflow-x-hidden bg-[#020205] animate-fade-in">
       
-      {/* Header Premium - Logo Fisso */}
+      {/* Header Premium - Logo Fisso dello Studio (Navigazione disattivata come richiesto) */}
       <header className="sticky top-0 z-50 bg-[#0f0c29]/90 backdrop-blur-xl border-b border-white/10 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-24 flex items-center justify-between">
-          <div className="cursor-pointer transition-transform hover:scale-105" onClick={() => setView('marketing')}>
+          <div>
             <BrandLogo 
+              {...studioBrand}
               size="md" 
-              text1="SEK"
-              text2="COMIX"
-              subtitle="STUDIO"
-              customColor="#00f260"
-              font="orbitron"
-              showIcon={true}
-              showSeparator={true}
-              showSubtitle={true}
-              separatorText="+"
               className="scale-75 md:scale-100 origin-left" 
             />
           </div>
@@ -133,7 +145,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-3 md:gap-6">
             <button 
               onClick={() => setView('marketing')}
-              className="hidden md:flex px-5 py-2.5 border border-white/20 rounded-full text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all shadow-lg"
+              className="hidden md:flex px-5 py-2.5 border border-white/20 rounded-full text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all shadow-lg active:scale-95"
             >
               Vision Mode
             </button>
@@ -156,20 +168,24 @@ const App: React.FC = () => {
           </div>
 
           <ImageEditor />
-          <BrandKit globalState={brandState} setGlobalState={setBrandState} />
+          <BrandKit 
+            globalState={workspaceState} 
+            setGlobalState={setWorkspaceState} 
+            onSetAsStudio={handleUpdateStudioIdentity}
+          />
         </div>
       </main>
 
       <footer className="border-t border-white/10 bg-black/80 backdrop-blur-md py-14 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-10 text-center md:text-left">
           <div className="flex flex-col items-center md:items-start gap-3">
-            <BrandLogo size="sm" showIcon={false} text1="SEK" text2="COMIX" className="opacity-60 grayscale brightness-150" />
+            <BrandLogo size="sm" showIcon={false} text1={studioBrand.text1} text2={studioBrand.text2} className="opacity-60 grayscale brightness-150" />
             <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.5em]">L'ERA DIGITALE È QUI</p>
           </div>
           
           <div className="flex flex-col items-center md:items-end gap-2">
             <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">
-              &copy; {new Date().getFullYear()} SEK COMIX STUDIO • DEFINIAMO NUOVE ERE
+              &copy; {new Date().getFullYear()} {studioBrand.text1} {studioBrand.text2} STUDIO • DEFINIAMO NUOVE ERE
             </p>
             <div className="flex gap-4 text-[9px] font-black uppercase tracking-widest text-brand-accent/60">
                <span>PWI EDITION</span>
