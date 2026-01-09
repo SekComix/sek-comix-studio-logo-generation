@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { BrandLogo } from './BrandLogo';
 import { generateIconImage } from '../services/geminiService';
@@ -8,8 +7,8 @@ import {
   ShoppingCart, Leaf, Utensils, Zap, Crown, Folder,
   Rocket, Layout, Image as ImageIcon, Star, Flame, Plane, 
   Dumbbell, Book, Home, Car, ChevronDown, ChevronRight, 
-  Settings2, Fingerprint, Eye, EyeOff, Save, Move,
-  XCircle, Type as TypeIcon
+  Settings2, Fingerprint, Eye, EyeOff, Save, Check,
+  Award, MousePointer2, X, CheckCircle2, AlertCircle
 } from 'lucide-react';
 
 declare global {
@@ -100,6 +99,13 @@ interface CustomCategory {
   iconKey: string;
   color: string;
   subtitle: string;
+  text1?: string;
+  text2?: string;
+  font?: any;
+  showIcon?: boolean;
+  showSeparator?: boolean;
+  showSubtitle?: boolean;
+  separatorText?: string;
   customImage?: string | null;
   iconPos?: { x: number; y: number };
   iconScale?: number;
@@ -110,9 +116,10 @@ type SubSection = 'identity' | 'ai' | 'stickers' | 'style';
 interface BrandKitProps {
   globalState: any;
   setGlobalState: React.Dispatch<React.SetStateAction<any>>;
+  onSetAsStudio?: (identity: any) => void;
 }
 
-export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState }) => {
+export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState, onSetAsStudio }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'showroom' | 'saved'>('editor');
   const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
   const [showroomType, setShowroomType] = useState<'neon' | 'totem' | 'card'>('neon');
@@ -126,13 +133,46 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
   const [logoSize, setLogoSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('md');
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [newItemsBadge, setNewItemsBadge] = useState(0);
+  
+  // LOGICA DI SELEZIONE MULTIPLA - CORRETTA
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      try { setCustomCategories(JSON.parse(stored)); } catch (e) { console.error(e); }
+      try { 
+        let parsed = JSON.parse(stored);
+        // RIPARAZIONE ID DUPLICATI O MANCANTI (Migration)
+        // Se troviamo loghi con ID uguale o mancante, assegniamo nuovi ID univoci
+        const seenIds = new Set();
+        const validated = parsed.map((item: any, index: number) => {
+          let uniqueId = item.id;
+          if (!uniqueId || seenIds.has(uniqueId)) {
+            uniqueId = `logo_${Date.now()}_${index}_${Math.floor(Math.random() * 1000)}`;
+          }
+          seenIds.add(uniqueId);
+          return { ...item, id: uniqueId };
+        });
+        setCustomCategories(validated); 
+      } catch (e) { 
+        console.error("Errore lettura archivio", e); 
+      }
     }
   }, []);
+
+  const toggleSelection = (id: string) => {
+    if (!id) return;
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+    // Applica all'editor per preview
+    const custom = customCategories.find(c => c.id === id);
+    if (custom) {
+      setGlobalState((prev: any) => ({ ...prev, ...custom }));
+    }
+  };
 
   const applyPreset = (presetId: string) => {
     setSelectedSticker(null);
@@ -140,10 +180,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
     if (preset) {
       setGlobalState((prev: any) => ({ ...prev, iconKey: preset.iconKey, color: preset.color, subtitle: preset.sub, customImage: null, showIcon: true, iconPos: { x: 0, y: 0 }, iconScale: 1 }));
       return;
-    }
-    const custom = customCategories.find(c => c.id === presetId);
-    if (custom) {
-      setGlobalState((prev: any) => ({ ...prev, iconKey: custom.iconKey, color: custom.color, subtitle: custom.subtitle, customImage: custom.customImage || null, showIcon: true, iconPos: custom.iconPos || { x: 0, y: 0 }, iconScale: custom.iconScale || 1 }));
     }
   };
 
@@ -168,12 +204,9 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
       alert("Attendi il caricamento della libreria di cattura."); 
       return; 
     }
-    
     setIsExporting(true);
-    
     try {
       const captureScale = pixelSize / element.offsetWidth;
-
       const canvas = await window.html2canvas(element, {
         backgroundColor: null,
         scale: captureScale,
@@ -198,7 +231,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
           }
         }
       });
-
       const dataUrl = canvas.toDataURL('image/png', 1.0);
       const link = document.createElement('a');
       link.href = dataUrl;
@@ -208,24 +240,55 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
       document.body.removeChild(link);
     } catch (err) {
       console.error(err);
-      alert("Errore nell'esportazione dell'immagine.");
+      alert("Errore nell'esportazione.");
     } finally {
       setIsExporting(false);
     }
   };
 
   const saveCurrentAsCategory = () => {
+    // GENERAZIONE ID ULTRA-UNIVOCO PER EVITARE COLLISIONI
+    const uniqueId = `logo_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const newCat: CustomCategory = { 
-      id: `save_${Date.now()}`, name: globalState.subtitle || 'PROGETTO STUDIO', iconKey: globalState.iconKey, 
-      color: globalState.color, subtitle: globalState.subtitle, customImage: globalState.customImage,
-      iconPos: globalState.iconPos, iconScale: globalState.iconScale
+      id: uniqueId, 
+      name: globalState.subtitle || 'PROGETTO STUDIO', 
+      ...globalState
     };
-    setCustomCategories(prev => {
-      const next = [newCat, ...prev];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-    alert('Salvato nell\'Archivio!');
+    const nextList = [newCat, ...customCategories];
+    setCustomCategories(nextList);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextList));
+    setSaveSuccess(true);
+    setNewItemsBadge(prev => prev + 1);
+    setTimeout(() => setSaveSuccess(false), 2000);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.length === 0) return;
+    const msg = selectedIds.length === 1 
+      ? 'Eliminare il logo selezionato?' 
+      : `Eliminare i ${selectedIds.length} loghi selezionati?`;
+      
+    if (window.confirm(msg)) {
+      const nextList = customCategories.filter(c => !selectedIds.includes(c.id));
+      setCustomCategories(nextList);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextList));
+      setSelectedIds([]);
+    }
+  };
+
+  const handlePromoteSelected = () => {
+    // DOPPIO CONTROLLO: Solo 1 elemento deve essere selezionato
+    if (selectedIds.length !== 1) return;
+    const cat = customCategories.find(c => c.id === selectedIds[0]);
+    if (!cat) return;
+    
+    if (window.confirm(`Impostare "${cat.text1} ${cat.text2}" come Identità Ufficiale Studio?`)) {
+      if (onSetAsStudio) {
+        onSetAsStudio(cat);
+        alert("Identità Studio Aggiornata!");
+        setSelectedIds([]);
+      }
+    }
   };
 
   const SidebarHeader = ({ title, icon: Icon, section }: { title: string, icon: any, section: SubSection }) => (
@@ -247,8 +310,21 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
         <div className="flex bg-white/5 backdrop-blur-2xl p-2 rounded-full border border-white/20 shadow-2xl max-w-2xl w-full gap-2 relative z-[60]">
           <button onClick={() => setActiveTab('editor')} className={`flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'editor' ? 'bg-brand-accent text-black' : 'text-white/60'}`}><PenTool size={18}/> Editor</button>
           <button onClick={() => setActiveTab('showroom')} className={`flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'showroom' ? 'bg-brand-accent2 text-white' : 'text-white/60'}`}><Layout size={18}/> Vetrina</button>
-          <button onClick={() => setActiveTab('saved')} className={`flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'saved' ? 'bg-purple-600 text-white' : 'text-white/60'}`}><Folder size={18}/> Archivio</button>
-          <button onClick={saveCurrentAsCategory} className="flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 bg-white/10 text-white hover:bg-brand-accent hover:text-black"><Save size={18}/> Salva</button>
+          <button 
+            onClick={() => { setActiveTab('saved'); setNewItemsBadge(0); }} 
+            className={`flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 relative ${activeTab === 'saved' ? 'bg-purple-600 text-white' : 'text-white/60'}`}
+          >
+            <Folder size={18}/> 
+            Archivio
+            {newItemsBadge > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] w-5 h-5 flex items-center justify-center rounded-full animate-bounce border-2 border-[#0f0c29]">{newItemsBadge}</span>}
+          </button>
+          <button 
+            onClick={saveCurrentAsCategory} 
+            className={`flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 shadow-lg transition-colors ${saveSuccess ? 'bg-green-500 text-white' : 'bg-white/10 text-white hover:bg-brand-accent hover:text-black'}`}
+          >
+            {saveSuccess ? <Check size={18} className="animate-bounce" /> : <Save size={18}/>}
+            {saveSuccess ? 'Salvato!' : 'Salva'}
+          </button>
         </div>
       </div>
 
@@ -259,28 +335,12 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
               <SidebarHeader title="Identità" icon={Fingerprint} section="identity" />
               {activeSubSection === 'identity' && (
                 <div className="bg-[#1a1638] p-6 rounded-2xl border border-white/10 space-y-4 animate-slide-up">
-                  
-                  {/* Gestione Icona */}
                   <div className="space-y-3 pb-4 border-b border-white/10">
                     <div className="flex items-center justify-between">
                       <label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Icona Intestazione</label>
                       <div className="flex gap-2">
-                        <button 
-                          onClick={() => setGlobalState({...globalState, showIcon: !globalState.showIcon})}
-                          className={`p-1.5 rounded-lg transition-all ${globalState.showIcon ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}
-                          title="Mostra/Nascondi Icona"
-                        >
-                          {globalState.showIcon ? <Eye size={14}/> : <EyeOff size={14}/>}
-                        </button>
-                        {(globalState.customImage || globalState.iconKey !== 'palette') && (
-                          <button 
-                            onClick={() => setGlobalState({...globalState, customImage: null, iconKey: 'palette'})}
-                            className="p-1.5 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-all"
-                            title="Reset Icona"
-                          >
-                            <RefreshCw size={14}/>
-                          </button>
-                        )}
+                        <button onClick={() => setGlobalState({...globalState, showIcon: !globalState.showIcon})} className={`p-1.5 rounded-lg transition-all ${globalState.showIcon ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}>{globalState.showIcon ? <Eye size={14}/> : <EyeOff size={14}/>}</button>
+                        {(globalState.customImage || globalState.iconKey !== 'palette') && <button onClick={() => setGlobalState({...globalState, customImage: null, iconKey: 'palette'})} className="p-1.5 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20"><RefreshCw size={14}/></button>}
                       </div>
                     </div>
                     <select value={globalState.iconKey} onChange={(e) => applyPreset(e.target.value)} className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none">
@@ -289,208 +349,178 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState 
                       {Object.keys(BASE_ICONS).map(k => <option key={k} value={k}>{BASE_ICONS[k].label}</option>)}
                     </select>
                   </div>
-
                   <div className="flex gap-2">
                     <input type="text" value={globalState.text1} onChange={(e) => setGlobalState({...globalState, text1: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-white" placeholder="TESTO 1" />
                     <input type="text" value={globalState.text2} onChange={(e) => setGlobalState({...globalState, text2: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-white" placeholder="TESTO 2" />
                   </div>
-
-                  {/* Gestione Separatore - Ripristinato Dropdown */}
                   <div className="space-y-3 pb-4 border-b border-white/10">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Separatore</label>
-                      <button 
-                        onClick={() => setGlobalState({...globalState, showSeparator: !globalState.showSeparator})}
-                        className={`p-1.5 rounded-lg transition-all ${globalState.showSeparator ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}
-                        title="Mostra/Nascondi Separatore"
-                      >
-                        {globalState.showSeparator ? <Eye size={14}/> : <EyeOff size={14}/>}
-                      </button>
-                    </div>
-                    <select 
-                      value={globalState.separatorText} 
-                      onChange={(e) => setGlobalState({...globalState, separatorText: e.target.value, showSeparator: true})}
-                      className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none"
-                    >
-                      {SEPARATOR_PRESETS.map(sep => (
-                        <option key={sep.value} value={sep.value}>{sep.label}</option>
-                      ))}
-                      {!SEPARATOR_PRESETS.some(s => s.value === globalState.separatorText) && (
-                        <option value={globalState.separatorText}>Custom: {globalState.separatorText}</option>
-                      )}
-                    </select>
+                    <div className="flex items-center justify-between"><label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Separatore</label><button onClick={() => setGlobalState({...globalState, showSeparator: !globalState.showSeparator})} className={`p-1.5 rounded-lg transition-all ${globalState.showSeparator ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}>{globalState.showSeparator ? <Eye size={14}/> : <EyeOff size={14}/>}</button></div>
+                    <select value={globalState.separatorText} onChange={(e) => setGlobalState({...globalState, separatorText: e.target.value, showSeparator: true})} className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none">{SEPARATOR_PRESETS.map(sep => (<option key={sep.value} value={sep.value}>{sep.label}</option>))}</select>
                   </div>
-
-                  {/* Gestione Tagline / Trigger */}
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Tagline / Trigger</label>
-                      <div className="flex gap-2">
-                         <button 
-                            onClick={() => setGlobalState({...globalState, showSubtitle: !globalState.showSubtitle})}
-                            className={`p-1.5 rounded-lg transition-all ${globalState.showSubtitle ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}
-                            title="Mostra/Nascondi Trigger"
-                          >
-                            {globalState.showSubtitle ? <Eye size={14}/> : <EyeOff size={14}/>}
-                          </button>
-                          {globalState.subtitle && (
-                            <button 
-                              onClick={() => setGlobalState({...globalState, subtitle: ''})}
-                              className="p-1.5 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-all"
-                              title="Cancella Trigger"
-                            >
-                              <Trash2 size={14}/>
-                            </button>
-                          )}
-                      </div>
-                    </div>
+                    <div className="flex items-center justify-between"><label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Tagline</label><div className="flex gap-2"><button onClick={() => setGlobalState({...globalState, showSubtitle: !globalState.showSubtitle})} className={`p-1.5 rounded-lg transition-all ${globalState.showSubtitle ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}>{globalState.showSubtitle ? <Eye size={14}/> : <EyeOff size={14}/>}</button>{globalState.subtitle && <button onClick={() => setGlobalState({...globalState, subtitle: ''})} className="p-1.5 rounded-lg text-red-500 bg-red-500/10"><Trash2 size={14}/></button>}</div></div>
                     <input type="text" value={globalState.subtitle} onChange={(e) => setGlobalState({...globalState, subtitle: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-xs text-brand-accent" placeholder="SCRIVI QUI..." />
                   </div>
                 </div>
               )}
-              
               <SidebarHeader title="Icona AI" icon={ImageIcon} section="ai" />
               {activeSubSection === 'ai' && (
                 <div className="bg-[#1a1638] p-6 rounded-2xl border border-white/10 space-y-6 animate-slide-up">
-                  <div className="flex gap-2">
-                    <input type="text" value={iconPrompt} onChange={(e) => setIconPrompt(e.target.value)} className="flex-1 bg-black/60 border border-white/20 rounded-xl p-3 text-sm text-white" placeholder="Descrivi icona AI..." />
-                    <button onClick={handleIconGenerate} disabled={isGeneratingIcon} className="bg-brand-accent text-black p-3 rounded-xl hover:scale-105 transition-all">
-                      {isGeneratingIcon ? <RefreshCw className="animate-spin" size={18}/> : <Sparkles size={18}/>}
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex justify-between text-[10px] font-black text-white/50 uppercase"><span>Scala Icona</span><span>{globalState.iconScale.toFixed(1)}x</span></div>
-                    <input type="range" min="0.3" max="3.0" step="0.1" value={globalState.iconScale} onChange={(e) => setGlobalState({...globalState, iconScale: parseFloat(e.target.value)})} className="w-full h-1 accent-brand-accent bg-white/10 rounded-full" />
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <span className="text-[9px] font-black text-white/30 uppercase">Pos X</span>
-                        <input type="range" min="-100" max="100" value={globalState.iconPos.x} onChange={(e) => setGlobalState({...globalState, iconPos: {...globalState.iconPos, x: parseInt(e.target.value)}})} className="w-full accent-brand-accent bg-white/10 h-1" />
-                      </div>
-                      <div className="space-y-2">
-                        <span className="text-[9px] font-black text-white/30 uppercase">Pos Y</span>
-                        <input type="range" min="-100" max="100" value={globalState.iconPos.y} onChange={(e) => setGlobalState({...globalState, iconPos: {...globalState.iconPos, x: parseInt(e.target.value)}})} className="w-full accent-brand-accent bg-white/10 h-1" />
-                        <input type="range" min="-100" max="100" value={globalState.iconPos.y} onChange={(e) => setGlobalState({...globalState, iconPos: {...globalState.iconPos, y: parseInt(e.target.value)}})} className="w-full accent-brand-accent bg-white/10 h-1" />
-                      </div>
-                    </div>
-                  </div>
+                  <div className="flex gap-2"><input type="text" value={iconPrompt} onChange={(e) => setIconPrompt(e.target.value)} className="flex-1 bg-black/60 border border-white/20 rounded-xl p-3 text-sm text-white" placeholder="Descrivi icona AI..." /><button onClick={handleIconGenerate} disabled={isGeneratingIcon} className="bg-brand-accent text-black p-3 rounded-xl hover:scale-105 transition-all">{isGeneratingIcon ? <RefreshCw className="animate-spin" size={18}/> : <Sparkles size={18}/>}</button></div>
+                  <div className="space-y-4"><div className="flex justify-between text-[10px] font-black text-white/50 uppercase"><span>Scala Icona</span><span>{globalState.iconScale.toFixed(1)}x</span></div><input type="range" min="0.3" max="3.0" step="0.1" value={globalState.iconScale} onChange={(e) => setGlobalState({...globalState, iconScale: parseFloat(e.target.value)})} className="w-full h-1 accent-brand-accent bg-white/10 rounded-full" /><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><span className="text-[9px] font-black text-white/30 uppercase">Pos X</span><input type="range" min="-100" max="100" value={globalState.iconPos.x} onChange={(e) => setGlobalState({...globalState, iconPos: {...globalState.iconPos, x: parseInt(e.target.value)}})} className="w-full accent-brand-accent bg-white/10 h-1" /></div><div className="space-y-2"><span className="text-[9px] font-black text-white/30 uppercase">Pos Y</span><input type="range" min="-100" max="100" value={globalState.iconPos.y} onChange={(e) => setGlobalState({...globalState, iconPos: {...globalState.iconPos, y: parseInt(e.target.value)}})} className="w-full accent-brand-accent bg-white/10 h-1" /></div></div></div>
                 </div>
               )}
-
               <SidebarHeader title="Stickers" icon={Star} section="stickers" />
               {activeSubSection === 'stickers' && (
                 <div className="bg-[#1a1638] p-6 rounded-2xl border border-white/10 space-y-6 animate-slide-up">
-                   <div className="flex gap-2 flex-wrap">
-                     {STICKER_LIST.map(stk => (
-                       <button key={stk.id} onClick={() => setSelectedSticker(stk.id)} className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all ${selectedSticker === stk.id ? 'bg-brand-accent/20 border-brand-accent text-brand-accent' : 'border-white/10 text-white/40'}`}>{stk.icon}</button>
-                     ))}
-                     {selectedSticker && <button onClick={() => setSelectedSticker(null)} className="text-red-500 p-2"><Trash2 size={16}/></button>}
-                   </div>
-                   {selectedSticker && (
-                     <div className="space-y-4 pt-4 border-t border-white/5">
-                        <input type="range" min="0.5" max="5.0" step="0.1" value={stickerPos.scale} onChange={(e) => setStickerPos({...stickerPos, scale: parseFloat(e.target.value)})} className="w-full accent-yellow-400" />
-                        <div className="grid grid-cols-2 gap-2">
-                          <input type="range" min="-300" max="300" value={stickerPos.x} onChange={(e) => setStickerPos({...stickerPos, x: parseInt(e.target.value)})} className="w-full" />
-                          <input type="range" min="-200" max="200" value={stickerPos.y} onChange={(e) => setStickerPos({...stickerPos, y: parseInt(e.target.value)})} className="w-full" />
-                        </div>
-                     </div>
-                   )}
+                   <div className="flex gap-2 flex-wrap">{STICKER_LIST.map(stk => (<button key={stk.id} onClick={() => setSelectedSticker(stk.id)} className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all ${selectedSticker === stk.id ? 'bg-brand-accent/20 border-brand-accent text-brand-accent' : 'border-white/10 text-white/40'}`}>{stk.icon}</button>))}{selectedSticker && <button onClick={() => setSelectedSticker(null)} className="text-red-500 p-2"><Trash2 size={16}/></button>}</div>
+                   {selectedSticker && (<div className="space-y-4 pt-4 border-t border-white/5"><input type="range" min="0.5" max="5.0" step="0.1" value={stickerPos.scale} onChange={(e) => setStickerPos({...stickerPos, scale: parseFloat(e.target.value)})} className="w-full accent-yellow-400" /><div className="grid grid-cols-2 gap-2"><input type="range" min="-300" max="300" value={stickerPos.x} onChange={(e) => setStickerPos({...stickerPos, x: parseInt(e.target.value)})} className="w-full" /><input type="range" min="-200" max="200" value={stickerPos.y} onChange={(e) => setStickerPos({...stickerPos, y: parseInt(e.target.value)})} className="w-full" /></div></div>)}
                 </div>
               )}
-
               <SidebarHeader title="Stile" icon={Settings2} section="style" />
               {activeSubSection === 'style' && (
                 <div className="bg-[#1a1638] p-6 rounded-2xl border border-white/10 space-y-6 animate-slide-up">
-                  <select value={globalState.font} onChange={(e) => setGlobalState({...globalState, font: e.target.value})} className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs text-brand-accent">
-                    {FONT_OPTIONS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
-                  </select>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {NEON_COLORS.map(c => <button key={c} onClick={() => setGlobalState({...globalState, color: c})} className={`w-6 h-6 rounded-full border shrink-0 ${globalState.color === c ? 'scale-125 border-white' : 'border-transparent'}`} style={{ backgroundColor: c }} />)}
-                  </div>
+                  <select value={globalState.font} onChange={(e) => setGlobalState({...globalState, font: e.target.value})} className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs text-brand-accent">{FONT_OPTIONS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}</select>
+                  <div className="flex gap-2 overflow-x-auto pb-2">{NEON_COLORS.map(c => <button key={c} onClick={() => setGlobalState({...globalState, color: c})} className={`w-6 h-6 rounded-full border shrink-0 ${globalState.color === c ? 'scale-125 border-white' : 'border-transparent'}`} style={{ backgroundColor: c }} />)}</div>
                 </div>
               )}
             </div>
           )}
 
           {activeTab === 'saved' && (
-            <div className="bg-[#1a1638] p-6 rounded-2xl border border-white/10 space-y-3 overflow-y-auto max-h-[500px]">
-              <h3 className="text-[10px] font-black uppercase text-purple-400 tracking-widest mb-4">I Tuoi Loghi</h3>
-              {customCategories.length === 0 && <p className="text-white/20 text-center py-10">Archivio vuoto</p>}
-              {customCategories.map(cat => (
-                <div key={cat.id} className="flex items-center bg-black/40 p-3 rounded-xl border border-white/5 group hover:border-brand-accent transition-all cursor-pointer" onClick={() => applyPreset(cat.id)}>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ color: cat.color }}>
-                    {cat.customImage ? <img src={cat.customImage} className="w-6 h-6 rounded object-cover" /> : BASE_ICONS[cat.iconKey]?.component}
-                  </div>
-                  <div className="ml-3 flex-1 overflow-hidden"><p className="text-[10px] font-black text-white uppercase truncate">{cat.subtitle || 'LOGO'}</p></div>
-                  <button onClick={(e) => {e.stopPropagation(); if(confirm('Eliminare?')){setCustomCategories(prev => prev.filter(c=>c.id!==cat.id));}}} className="opacity-0 group-hover:opacity-100 text-red-500 hover:scale-110 transition-all"><Trash2 size={14}/></button>
+            <div className="bg-[#1a1638] p-1 rounded-2xl border border-white/10 flex flex-col h-[600px] animate-fade-in relative overflow-hidden shadow-2xl">
+              
+              {/* BARRA DI CONTROLLO FISSA */}
+              <div className="p-4 border-b border-white/10 bg-black/40 backdrop-blur-md z-30">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-[10px] font-black uppercase text-purple-400 tracking-widest px-2 flex items-center gap-2">
+                    <Folder size={14}/> Archivio Personale
+                  </h3>
+                  {selectedIds.length > 0 && (
+                    <button onClick={() => setSelectedIds([])} className="text-white/40 hover:text-white flex items-center gap-1 text-[8px] font-black uppercase">
+                      Annulla <X size={12}/>
+                    </button>
+                  )}
                 </div>
-              ))}
+
+                <div className={`transition-all duration-300 ${selectedIds.length > 0 ? 'opacity-100 translate-y-0 h-auto' : 'opacity-0 translate-y-[-10px] pointer-events-none h-0 overflow-hidden'}`}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* AWARD: Attivo solo se selezione === 1 */}
+                    <button 
+                      onClick={handlePromoteSelected}
+                      disabled={selectedIds.length !== 1}
+                      className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl transition-all shadow-lg ${
+                        selectedIds.length === 1 
+                        ? 'bg-yellow-500 text-black hover:scale-105 active:scale-95' 
+                        : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/10'
+                      }`}
+                    >
+                      <Award size={18}/>
+                      <span className="text-[8px] font-black uppercase">
+                        {selectedIds.length > 1 ? 'Solo 1 per Award' : 'Imposta Studio'}
+                      </span>
+                    </button>
+
+                    {/* TRASH: Sempre attivo se selezione > 0 */}
+                    <button 
+                      onClick={handleDeleteSelected}
+                      className="flex flex-col items-center justify-center gap-1 p-3 bg-red-500 text-white rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg"
+                    >
+                      <Trash2 size={18}/>
+                      <span className="text-[8px] font-black uppercase">Elimina ({selectedIds.length})</span>
+                    </button>
+                  </div>
+                  
+                  {selectedIds.length > 1 && (
+                    <div className="mt-2 flex items-center justify-center gap-2 text-[8px] font-black text-yellow-500/60 uppercase text-center animate-pulse">
+                      <AlertCircle size={10}/> Deseleziona per abilitare Award
+                    </div>
+                  )}
+                </div>
+                
+                {selectedIds.length === 0 && (
+                  <div className="py-2 text-center">
+                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Tocca i loghi per selezionare</p>
+                  </div>
+                )}
+              </div>
+
+              {/* LISTA SCORREVOLE */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                {customCategories.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-20">
+                    <Folder size={48} />
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em]">Nessun logo salvato</p>
+                  </div>
+                )}
+                
+                {customCategories.map((cat, idx) => {
+                  // Verifica ID univoco
+                  const logoId = cat.id || `fallback_${idx}`;
+                  const isSelected = selectedIds.includes(logoId);
+                  
+                  return (
+                    <button 
+                      key={logoId}
+                      onClick={() => toggleSelection(logoId)}
+                      className={`w-full flex items-center p-4 rounded-2xl transition-all text-left overflow-hidden border-2 relative group ${
+                        isSelected 
+                          ? 'bg-brand-accent/20 border-brand-accent shadow-[0_0_25px_rgba(0,242,96,0.3)]' 
+                          : 'bg-black/40 border-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-black/60 shadow-inner overflow-hidden" style={{ color: cat.color }}>
+                        {cat.customImage ? (
+                          <img src={cat.customImage} className="w-10 h-10 rounded-lg object-cover" />
+                        ) : (
+                          BASE_ICONS[cat.iconKey]?.component || <ImageIcon size={24}/>
+                        )}
+                      </div>
+                      
+                      <div className="ml-5 flex-1 overflow-hidden">
+                        <p className={`text-[11px] font-black uppercase truncate tracking-tight ${isSelected ? 'text-brand-accent' : 'text-white'}`}>
+                          {cat.text1} {cat.text2}
+                        </p>
+                        <p className="text-[8px] font-bold text-white/30 uppercase truncate mt-0.5">
+                          {cat.subtitle || 'PROGETTO STUDIO'}
+                        </p>
+                      </div>
+
+                      <div className={`ml-3 transition-all duration-300 ${isSelected ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
+                        <div className="bg-brand-accent text-black rounded-full p-1 shadow-[0_0_10px_#00f260]">
+                          <CheckCircle2 size={16} />
+                        </div>
+                      </div>
+                      
+                      {!isSelected && (
+                        <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MousePointer2 size={14} className="text-white/20" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
 
         <div className={`${activeTab === 'showroom' ? 'lg:col-span-12' : 'lg:col-span-8'} flex flex-col items-center`}>
           <div className="relative w-full aspect-[12/7] rounded-[3rem] border border-white/10 flex flex-col items-center justify-center p-8 transition-all shadow-2xl overflow-hidden" style={{ backgroundColor: previewBg }}>
-            
-            {activeTab === 'showroom' && (
-              <div className="absolute top-8 flex bg-black/50 p-1 rounded-full border border-white/10 z-20">
-                {['neon', 'totem', 'card'].map(t => (
-                  <button key={t} onClick={() => setShowroomType(t as any)} className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${showroomType === t ? 'bg-white text-black' : 'text-white/40'}`}>{t}</button>
-                ))}
-              </div>
-            )}
-
+            {activeTab === 'showroom' && (<div className="absolute top-8 flex bg-black/50 p-1 rounded-full border border-white/10 z-20">{['neon', 'totem', 'card'].map(t => (<button key={t} onClick={() => setShowroomType(t as any)} className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${showroomType === t ? 'bg-white text-black' : 'text-white/40'}`}>{t}</button>))}</div>)}
             <div className="flex items-center justify-center w-full h-full relative" style={{ overflow: 'visible' }}>
-              <div 
-                id="preview-scaler"
-                style={{ 
-                  transform: `scale(${getVisualPreviewScale()})`,
-                  transformOrigin: 'center center',
-                  transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 'fit-content',
-                  height: 'fit-content'
-                }}
-              >
-                <BrandLogo 
-                  id="active-logo-canvas" 
-                  size={activeTab === 'showroom' ? 'xl' : logoSize} 
-                  {...globalState} 
-                  customIcon={BASE_ICONS[globalState.iconKey]?.component} 
-                  customImageSrc={globalState.customImage} 
-                  customColor={globalState.color} 
-                  theme={logoTheme}
-                  sticker={selectedSticker}
-                  stickerConfig={stickerPos}
-                />
+              <div id="preview-scaler" style={{ transform: `scale(${getVisualPreviewScale()})`, transformOrigin: 'center center', transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)', display: 'flex', alignItems: 'center', justifySelf: 'center', width: 'fit-content', height: 'fit-content' }}>
+                <BrandLogo id="active-logo-canvas" size={activeTab === 'showroom' ? 'xl' : logoSize} {...globalState} customIcon={BASE_ICONS[globalState.iconKey]?.component} customImageSrc={globalState.customImage} customColor={globalState.color} theme={logoTheme} sticker={selectedSticker} stickerConfig={stickerPos} />
               </div>
             </div>
-
             {activeTab === 'editor' && (
               <div className="absolute bottom-6 flex flex-wrap justify-center gap-4 bg-black/60 backdrop-blur-xl p-3 rounded-full border border-white/20 z-30">
-                <div className="flex gap-2 px-3 border-r border-white/10">
-                  {BG_PRESETS.map(bg => <button key={bg.hex} onClick={() => {setPreviewBg(bg.hex); setLogoTheme(bg.theme as any)}} className="w-4 h-4 rounded-full" style={{ backgroundColor: bg.hex }} />)}
-                </div>
-                <div className="flex gap-1 px-3 border-r border-white/10">
-                  {['sm', 'md', 'lg', 'xl'].map(s => <button key={s} onClick={() => syncSize(s as any)} className={`px-3 py-1 text-[8px] font-black rounded-lg ${logoSize === s ? 'bg-brand-accent text-black' : 'text-white'}`}>{s.toUpperCase()}</button>)}
-                </div>
-                <div className="flex items-center gap-4 px-3">
-                  <span className="text-[8px] font-black text-white/50">{pixelSize}PX</span>
-                  <input type="range" min="400" max="4000" step="100" value={pixelSize} onChange={(e)=>setPixelSize(parseInt(e.target.value))} className="w-20" />
-                  <button onClick={downloadLogo} disabled={isExporting} className="bg-brand-accent text-black p-2 rounded-full hover:scale-110 transition-all">
-                    {isExporting ? <RefreshCw className="animate-spin" size={16}/> : <Download size={16} />}
-                  </button>
-                </div>
+                <div className="flex gap-2 px-3 border-r border-white/10">{BG_PRESETS.map(bg => <button key={bg.hex} onClick={() => {setPreviewBg(bg.hex); setLogoTheme(bg.theme as any)}} className="w-4 h-4 rounded-full" style={{ backgroundColor: bg.hex }} />)}</div>
+                <div className="flex gap-1 px-3 border-r border-white/10">{['sm', 'md', 'lg', 'xl'].map(s => <button key={s} onClick={() => syncSize(s as any)} className={`px-3 py-1 text-[8px] font-black rounded-lg ${logoSize === s ? 'bg-brand-accent text-black' : 'text-white'}`}>{s.toUpperCase()}</button>)}</div>
+                <div className="flex items-center gap-4 px-3"><span className="text-[8px] font-black text-white/50">{pixelSize}PX</span><input type="range" min="400" max="4000" step="100" value={pixelSize} onChange={(e)=>setPixelSize(parseInt(e.target.value))} className="w-20" /><button onClick={downloadLogo} disabled={isExporting} className="bg-brand-accent text-black p-2 rounded-full hover:scale-110 transition-all">{isExporting ? <RefreshCw className="animate-spin" size={16}/> : <Download size={16} />}</button></div>
               </div>
             )}
-            
-            {activeTab === 'showroom' && (
-              <div className="absolute bottom-8 text-center animate-fade-in z-30">
-                 <h4 className="text-brand-accent text-[12px] font-black uppercase tracking-[0.4em] mb-1">{SHOWROOM_DESCRIPTIONS[showroomType].title}</h4>
-                 <p className="text-white/60 text-xs italic">{SHOWROOM_DESCRIPTIONS[showroomType].text}</p>
-              </div>
-            )}
+            {activeTab === 'showroom' && (<div className="absolute bottom-8 text-center animate-fade-in z-30"><h4 className="text-brand-accent text-[12px] font-black uppercase tracking-[0.4em] mb-1">{SHOWROOM_DESCRIPTIONS[showroomType].title}</h4><p className="text-white/60 text-xs italic">{SHOWROOM_DESCRIPTIONS[showroomType].text}</p></div>)}
           </div>
         </div>
       </div>
