@@ -5,7 +5,8 @@ import ImageEditor from './components/ImageEditor';
 import { BrandKit } from './components/BrandKit';
 import { Sparkles, Zap, ArrowRight, Cpu, Layers } from 'lucide-react';
 
-const STUDIO_IDENTITY_KEY = 'sek_studio_identity_v1';
+const STUDIO_IDENTITY_KEY = 'sek_studio_identity_v2';
+const WORKSPACE_SAVE_KEY = 'sek_workspace_temp_v2';
 
 const DEFAULT_STUDIO_BRAND = {
   text1: 'SEK',
@@ -31,25 +32,26 @@ const DEFAULT_STUDIO_BRAND = {
 const App: React.FC = () => {
   const [view, setView] = useState<'marketing' | 'design'>('marketing');
   
-  const [studioBrand, setStudioBrand] = useState(DEFAULT_STUDIO_BRAND);
-
-  const [workspaceState, setWorkspaceState] = useState({
-    ...DEFAULT_STUDIO_BRAND,
-    text1: 'NUOVO',
-    text2: 'LOGO',
-    subtitle: 'CLIENTE'
+  // Inizializzazione "Lazy": legge dal localStorage PRIMA del primo render
+  const [studioBrand, setStudioBrand] = useState(() => {
+    const saved = localStorage.getItem(STUDIO_IDENTITY_KEY);
+    return saved ? { ...DEFAULT_STUDIO_BRAND, ...JSON.parse(saved) } : DEFAULT_STUDIO_BRAND;
   });
 
+  const [workspaceState, setWorkspaceState] = useState(() => {
+    const saved = localStorage.getItem(WORKSPACE_SAVE_KEY);
+    return saved ? JSON.parse(saved) : {
+      ...DEFAULT_STUDIO_BRAND,
+      text1: 'NUOVO',
+      text2: 'LOGO',
+      subtitle: 'CLIENTE'
+    };
+  });
+
+  // Salva automaticamente il workspace quando cambia
   useEffect(() => {
-    const savedIdentity = localStorage.getItem(STUDIO_IDENTITY_KEY);
-    if (savedIdentity) {
-      try {
-        setStudioBrand(JSON.parse(savedIdentity));
-      } catch (e) {
-        console.error("Errore caricamento identità studio", e);
-      }
-    }
-  }, []);
+    localStorage.setItem(WORKSPACE_SAVE_KEY, JSON.stringify(workspaceState));
+  }, [workspaceState]);
 
   const handleUpdateStudioIdentity = (newIdentity: any) => {
     const updatedBrand = {
@@ -61,7 +63,7 @@ const App: React.FC = () => {
   };
 
   const handleSendToWorkspace = (imageUrl: string) => {
-    setWorkspaceState(prev => ({
+    setWorkspaceState((prev: any) => ({
       ...prev,
       customImage: imageUrl,
       showIcon: true
@@ -78,8 +80,6 @@ const App: React.FC = () => {
           <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-brand-accent2/10 rounded-full blur-[150px]"></div>
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30 brightness-75"></div>
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_70%,transparent_100%)]"></div>
-          <div className="absolute top-1/4 left-1/3 w-1.5 h-1.5 bg-brand-accent rounded-full animate-ping shadow-[0_0_15px_#00f260]"></div>
-          <div className="absolute bottom-1/3 right-1/4 w-1.5 h-1.5 bg-brand-accent2 rounded-full animate-ping delay-700 shadow-[0_0_15px_#0575E6]"></div>
         </div>
 
         <div className="relative z-10 animate-fade-in-down">
@@ -115,14 +115,6 @@ const App: React.FC = () => {
                 <span className="relative z-10">Accedi al Laboratorio</span>
                 <ArrowRight className="relative z-10 group-hover:translate-x-2 transition-transform" />
               </button>
-              
-              <div className="flex items-center gap-8 text-white/40">
-                <div className="h-[2px] w-16 bg-gradient-to-r from-transparent to-white/20"></div>
-                <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.4em] text-white/60">
-                  <Layers size={16} className="text-brand-accent2" /> Design Quantistico 2025
-                </div>
-                <div className="h-[2px] w-16 bg-gradient-to-l from-transparent to-white/20"></div>
-              </div>
             </div>
           </div>
         </div>
@@ -143,7 +135,7 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-black overflow-x-hidden bg-[#020205] animate-fade-in">
       <header className="sticky top-0 z-50 bg-[#0f0c29]/90 backdrop-blur-xl border-b border-white/10 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-24 flex items-center justify-between">
-          <div>
+          <div onClick={() => setView('marketing')} className="cursor-pointer">
             <BrandLogo 
               {...studioBrand}
               size="md" 
@@ -183,11 +175,6 @@ const App: React.FC = () => {
             <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">
               &copy; {new Date().getFullYear()} {studioBrand.text1} {studioBrand.text2} STUDIO • DEFINIAMO NUOVE ERE
             </p>
-            <div className="flex gap-4 text-[9px] font-black uppercase tracking-widest text-brand-accent/60">
-               <span>PWI EDITION</span>
-               <span className="text-white/20">•</span>
-               <span>GEMINI CORE</span>
-            </div>
           </div>
         </div>
       </footer>
