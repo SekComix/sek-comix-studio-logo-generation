@@ -125,9 +125,9 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             width: `${iconBaseSize}px`, 
             height: `${iconBaseSize}px`,
             objectFit: 'contain',
-            // mix-blend-mode: screen rende trasparente il nero, perfetto per loghi isolati su fondo scuro
+            // La magia: il nero dell'immagine AI diventa trasparente su sfondi scuri
             mixBlendMode: 'screen',
-            filter: `brightness(1.5) drop-shadow(0 0 ${4 * currentScale}px ${color})`,
+            filter: `brightness(1.1) contrast(1.1) drop-shadow(0 0 ${4 * currentScale}px ${color}88)`,
           }}
         />
       );
@@ -181,7 +181,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
               overflow: 'visible'
             }}
           >
-            <div className="absolute inset-0 blur-xl opacity-30 rounded-full scale-150" style={{ background: color }}></div>
+            <div className="absolute inset-0 blur-xl opacity-20 rounded-full scale-150" style={{ background: color }}></div>
             <div className="relative z-10 flex items-center justify-center" style={{ color: color }}>
               {renderIcon()}
             </div>
