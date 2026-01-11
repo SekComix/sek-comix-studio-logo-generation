@@ -1,14 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
-import { BrandLogo } from './BrandLogo';
+import { BrandLogo, ICON_MAP } from './BrandLogo';
 import { generateIconImage } from '../services/geminiService';
 import { 
-  Download, Sparkles, Palette, Camera, Code, Music, 
-  Trash2, PenTool, RefreshCw, Briefcase, Heart, Gamepad, 
-  ShoppingCart, Leaf, Utensils, Zap, Crown, Folder,
-  Rocket, Layout, Image as ImageIcon, Star, Flame, Plane, 
-  Dumbbell, Book, Home, Car, ChevronDown, ChevronRight, 
-  Settings2, Fingerprint, Eye, EyeOff, Save, Check,
-  Award, MousePointer2, X, CheckCircle2, AlertCircle
+  Download, Sparkles, Palette, Trash2, PenTool, RefreshCw, 
+  Folder, Star, ChevronDown, ChevronRight, Fingerprint, Eye, 
+  EyeOff, Save, Check, Award, X, Type,
+  RotateCcw, Settings2, Hash, Flame, Zap, Heart, Rocket, Move,
+  Archive, Maximize2, CheckSquare, Square, CheckCircle2
 } from 'lucide-react';
 
 declare global {
@@ -19,26 +18,12 @@ declare global {
 
 const STORAGE_KEY = 'sek_studio_vault_vFinal_2025';
 
-const BASE_ICONS: Record<string, { component: React.ReactNode, label: string }> = {
-  'palette': { component: <Palette />, label: 'Arte' },
-  'camera': { component: <Camera />, label: 'Foto' },
-  'music': { component: <Music />, label: 'Musica' },
-  'gamepad': { component: <Gamepad />, label: 'Gaming' },
-  'code': { component: <Code />, label: 'Dev' },
-  'briefcase': { component: <Briefcase />, label: 'Lavoro' },
-  'shopping-cart': { component: <ShoppingCart />, label: 'Shop' },
-  'utensils': { component: <Utensils />, label: 'Food' },
-  'star': { component: <Star />, label: 'Stella' },
-  'heart': { component: <Heart />, label: 'Love' },
-  'zap': { component: <Zap />, label: 'Power' },
-  'crown': { component: <Crown />, label: 'King' },
-  'leaf': { component: <Leaf />, label: 'Bio' },
-  'rocket': { component: <Rocket />, label: 'Lancio' },
-  'plane': { component: <Plane />, label: 'Viaggi' },
-  'dumbbell': { component: <Dumbbell />, label: 'Sport' },
-  'book': { component: <Book />, label: 'Libri' },
-  'home': { component: <Home />, label: 'Casa' },
-  'car': { component: <Car />, label: 'Auto' },
+const ICON_LABELS: Record<string, string> = {
+  'palette': 'Arte', 'camera': 'Foto', 'music': 'Musica', 'gamepad': 'Gaming',
+  'code': 'Dev', 'briefcase': 'Lavoro', 'shopping-cart': 'Shop', 'utensils': 'Food',
+  'star': 'Stella', 'heart': 'Love', 'zap': 'Power', 'crown': 'King',
+  'leaf': 'Bio', 'rocket': 'Lancio', 'plane': 'Viaggi', 'dumbbell': 'Sport',
+  'book': 'Libri', 'home': 'Casa', 'car': 'Auto',
 };
 
 const PRESET_CATEGORIES = [
@@ -50,12 +35,6 @@ const PRESET_CATEGORIES = [
   { id: 'tech', label: 'Tech / Software', iconKey: 'code', color: '#ffffff', sub: 'SYSTEM' },
 ];
 
-const SHOWROOM_DESCRIPTIONS = {
-  neon: { title: "Evoluzione NEON", text: "Brand futuristici ad alto impatto con illuminazione vibrante e contrasti cyber." },
-  totem: { title: "Identità TOTEM", text: "Solidità e minimalismo monolitico per studi professionali e architettura d'avanguardia." },
-  card: { title: "Business CARD", text: "Bilanciamento perfetto per la stampa premium e l'uso coordinato sui canali social." }
-};
-
 const STICKER_LIST = [
   { id: 'sparkles', icon: <Sparkles size={16} /> },
   { id: 'flame', icon: <Flame size={16} /> },
@@ -65,22 +44,7 @@ const STICKER_LIST = [
   { id: 'rocket', icon: <Rocket size={16} /> },
 ];
 
-const FONT_OPTIONS = [
-  { id: 'orbitron', label: 'Orbitron' },
-  { id: 'anton', label: 'Anton' },
-  { id: 'playfair', label: 'Playfair' },
-  { id: 'montserrat', label: 'Montserrat' },
-  { id: 'lobster', label: 'Lobster' },
-];
-
-const NEON_COLORS = ['#00f260', '#0575E6', '#f20060', '#f2f200', '#00f2f2', '#f200f2', '#ffffff', '#ffa500', '#808080'];
-const BG_PRESETS = [
-  { name: 'Midnight', hex: '#0f0c29', theme: 'dark' },
-  { name: 'Studio', hex: '#302b63', theme: 'dark' },
-  { name: 'Antracite', hex: '#1f2937', theme: 'dark' },
-  { name: 'Grigio', hex: '#e5e7eb', theme: 'light' },
-  { name: 'White', hex: '#ffffff', theme: 'light' },
-];
+const NEON_COLORS = ['#00f260', '#0575E6', '#f20060', '#f2f200', '#00f200', '#f200f2', '#ffffff', '#ffa500', '#808080'];
 
 const SEPARATOR_PRESETS = [
   { label: 'Più (+)', value: '+' },
@@ -109,9 +73,15 @@ interface CustomCategory {
   customImage?: string | null;
   iconPos?: { x: number; y: number };
   iconScale?: number;
+  sticker?: string | null;
+  stickerConfig?: { x: number; y: number; scale: number };
+  taglineConfig?: { x: number; y: number; scale: number };
+  separatorConfig?: { x: number; y: number; scale: number };
+  showSticker?: boolean;
 }
 
-type SubSection = 'identity' | 'ai' | 'stickers' | 'style';
+type SubSection = 'identity' | 'ai' | 'stickers' | 'advanced';
+type EditFocus = 'icon' | 'separator' | 'tagline' | 'sticker';
 
 interface BrandKitProps {
   globalState: any;
@@ -122,64 +92,56 @@ interface BrandKitProps {
 export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState, onSetAsStudio }) => {
   const [activeTab, setActiveTab] = useState<'editor' | 'showroom' | 'saved'>('editor');
   const [activeSubSection, setActiveSubSection] = useState<SubSection | null>(null);
-  const [showroomType, setShowroomType] = useState<'neon' | 'totem' | 'card'>('neon');
-  const [previewBg, setPreviewBg] = useState('#0f0c29');
-  const [logoTheme, setLogoTheme] = useState<'dark' | 'light'>('dark');
+  const [editFocus, setEditFocus] = useState<EditFocus>('icon');
   const [iconPrompt, setIconPrompt] = useState('');
   const [isGeneratingIcon, setIsGeneratingIcon] = useState(false);
-  const [selectedSticker, setSelectedSticker] = useState<string | null>(null);
-  const [stickerPos, setStickerPos] = useState({ x: 0, y: 0, scale: 1.0 });
-  const [pixelSize, setPixelSize] = useState(1200);
-  const [logoSize, setLogoSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('md');
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>([]);
-  const [isExporting, setIsExporting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [newItemsBadge, setNewItemsBadge] = useState(0);
-  
-  // LOGICA DI SELEZIONE MULTIPLA - CORRETTA
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [logoSize, setLogoSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('md');
+  const [previewScale, setPreviewScale] = useState(1.0);
+  const [showIdentityPicker, setShowIdentityPicker] = useState(false);
+  const [pendingStudioLogo, setPendingStudioLogo] = useState<CustomCategory | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      try { 
-        let parsed = JSON.parse(stored);
-        // RIPARAZIONE ID DUPLICATI O MANCANTI (Migration)
-        // Se troviamo loghi con ID uguale o mancante, assegniamo nuovi ID univoci
-        const seenIds = new Set();
-        const validated = parsed.map((item: any, index: number) => {
-          let uniqueId = item.id;
-          if (!uniqueId || seenIds.has(uniqueId)) {
-            uniqueId = `logo_${Date.now()}_${index}_${Math.floor(Math.random() * 1000)}`;
-          }
-          seenIds.add(uniqueId);
-          return { ...item, id: uniqueId };
-        });
-        setCustomCategories(validated); 
-      } catch (e) { 
-        console.error("Errore lettura archivio", e); 
-      }
+      try {
+        const parsed = JSON.parse(stored);
+        setCustomCategories(parsed);
+      } catch (e) { console.error(e); }
     }
   }, []);
 
-  const toggleSelection = (id: string) => {
-    if (!id) return;
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-    // Applica all'editor per preview
-    const custom = customCategories.find(c => c.id === id);
-    if (custom) {
-      setGlobalState((prev: any) => ({ ...prev, ...custom }));
-    }
+  useEffect(() => {
+    const scaleMap = { sm: 0.6, md: 1.0, lg: 2.2, xl: 4.5 };
+    setPreviewScale(scaleMap[logoSize] || 1.0);
+  }, [logoSize]);
+
+  const handlePreview = (cat: CustomCategory) => {
+    const { id, name, ...cleanState } = cat;
+    setGlobalState(JSON.parse(JSON.stringify(cleanState)));
   };
 
-  const applyPreset = (presetId: string) => {
-    setSelectedSticker(null);
-    const preset = PRESET_CATEGORIES.find(p => p.id === presetId);
-    if (preset) {
-      setGlobalState((prev: any) => ({ ...prev, iconKey: preset.iconKey, color: preset.color, subtitle: preset.sub, customImage: null, showIcon: true, iconPos: { x: 0, y: 0 }, iconScale: 1 }));
-      return;
+  const handleRowClick = (cat: CustomCategory) => {
+    handlePreview(cat);
+    setSelectedIds([cat.id]);
+  };
+
+  const toggleSelection = (e: React.MouseEvent, cat: CustomCategory) => {
+    e.stopPropagation();
+    const id = cat.id;
+    handlePreview(cat);
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  const handleMasterToggle = () => {
+    if (selectedIds.length > 0) {
+      setSelectedIds([]);
+    } else {
+      const allIds = customCategories.map(c => c.id);
+      setSelectedIds(allIds);
+      if (customCategories.length > 0) handlePreview(customCategories[0]);
     }
   };
 
@@ -189,338 +151,377 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
     try {
       const img = await generateIconImage(iconPrompt, globalState.color);
       setGlobalState((prev: any) => ({ ...prev, customImage: img, showIcon: true }));
+      setEditFocus('icon');
+      setIconPrompt('');
     } catch (e: any) { alert(e.message); } finally { setIsGeneratingIcon(false); }
   };
 
-  const syncSize = (size: 'sm' | 'md' | 'lg' | 'xl') => {
-    setLogoSize(size);
-    const pixelMap = { sm: 600, md: 1200, lg: 2400, xl: 3600 };
-    setPixelSize(pixelMap[size]);
+  const handleStickerClick = (sid: string) => {
+    setGlobalState({ ...globalState, sticker: sid, showSticker: true });
+    setEditFocus('sticker');
+  };
+
+  const handleFinalIdentitySelection = () => {
+    if (!onSetAsStudio || !pendingStudioLogo) return;
+    const { id, name, ...identityToPromote } = pendingStudioLogo;
+    onSetAsStudio(identityToPromote);
+    setPendingStudioLogo(null);
+    setShowIdentityPicker(false);
+  };
+
+  const handleDeleteSelected = () => {
+    const nextList = customCategories.filter(c => !selectedIds.includes(c.id));
+    setCustomCategories(nextList);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextList));
+    setSelectedIds([]);
+  };
+
+  const resetPositions = () => {
+    setGlobalState({
+      ...globalState,
+      iconScale: 1,
+      iconPos: { x: 0, y: 0 },
+      stickerConfig: { x: 0, y: 0, scale: 1 },
+      taglineConfig: { x: 0, y: 0, scale: 1 },
+      separatorConfig: { x: 0, y: 0, scale: 1 }
+    });
+  };
+
+  const clearSticker = () => setGlobalState({ ...globalState, sticker: null, showSticker: false });
+
+  const saveCurrentAsCategory = () => {
+    const stateToSave = JSON.parse(JSON.stringify(globalState));
+    const uniqueId = `ID_${Date.now()}_${Math.floor(Math.random() * 999999)}`;
+    const newCat: CustomCategory = { ...stateToSave, id: uniqueId, name: stateToSave.subtitle || 'PROGETTO' };
+    const updatedCategories = [newCat, ...customCategories];
+    setCustomCategories(updatedCategories);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCategories));
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2000);
   };
 
   const downloadLogo = async () => {
     const element = document.getElementById('active-logo-canvas');
-    if (!element || !window.html2canvas) { 
-      alert("Attendi il caricamento della libreria di cattura."); 
-      return; 
-    }
-    setIsExporting(true);
+    if (!element) return;
     try {
-      const captureScale = pixelSize / element.offsetWidth;
-      const canvas = await window.html2canvas(element, {
-        backgroundColor: null,
-        scale: captureScale,
-        useCORS: true,
-        logging: false,
-        onclone: (clonedDoc: Document) => {
-          const clonedElement = clonedDoc.getElementById('active-logo-canvas');
-          if (clonedElement) {
-            clonedElement.style.width = "fit-content";
-            clonedElement.style.height = "fit-content";
-            clonedElement.style.position = "static";
-            clonedElement.style.transform = "none";
-            const parent = clonedElement.parentElement;
-            if (parent && parent.id === 'preview-scaler') {
-              parent.style.transform = 'none';
-              parent.style.width = 'fit-content';
-              parent.style.height = 'fit-content';
-            }
-            const safePadding = logoSize === 'xl' ? 200 : logoSize === 'lg' ? 100 : 40;
-            clonedElement.style.padding = `${safePadding}px`;
-            clonedElement.style.display = "flex";
-          }
-        }
-      });
-      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const canvas = await window.html2canvas(element, { backgroundColor: null, scale: 2, useCORS: true });
       const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `sek-brand-${logoSize}-${pixelSize}px.png`;
-      document.body.appendChild(link);
+      link.download = `Logo_${globalState.text1}.png`;
+      link.href = canvas.toDataURL('image/png');
       link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error(err);
-      alert("Errore nell'esportazione.");
-    } finally {
-      setIsExporting(false);
+    } catch (e) { console.error(e); }
+  };
+
+  const getFocusLabel = () => {
+    switch(editFocus) {
+      case 'icon': return 'Icona';
+      case 'separator': return 'Separatore';
+      case 'tagline': return 'Tagline';
+      case 'sticker': return 'Sticker';
     }
   };
 
-  const saveCurrentAsCategory = () => {
-    // GENERAZIONE ID ULTRA-UNIVOCO PER EVITARE COLLISIONI
-    const uniqueId = `logo_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-    const newCat: CustomCategory = { 
-      id: uniqueId, 
-      name: globalState.subtitle || 'PROGETTO STUDIO', 
-      ...globalState
-    };
-    const nextList = [newCat, ...customCategories];
-    setCustomCategories(nextList);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextList));
-    setSaveSuccess(true);
-    setNewItemsBadge(prev => prev + 1);
-    setTimeout(() => setSaveSuccess(false), 2000);
-  };
-
-  const handleDeleteSelected = () => {
-    if (selectedIds.length === 0) return;
-    const msg = selectedIds.length === 1 
-      ? 'Eliminare il logo selezionato?' 
-      : `Eliminare i ${selectedIds.length} loghi selezionati?`;
-      
-    if (window.confirm(msg)) {
-      const nextList = customCategories.filter(c => !selectedIds.includes(c.id));
-      setCustomCategories(nextList);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextList));
-      setSelectedIds([]);
+  const getActiveConfig = () => {
+    switch(editFocus) {
+      case 'icon': return { x: globalState.iconPos?.x || 0, y: globalState.iconPos?.y || 0, scale: globalState.iconScale || 1 };
+      case 'sticker': return globalState.stickerConfig || { x: 0, y: 0, scale: 1 };
+      case 'tagline': return globalState.taglineConfig || { x: 0, y: 0, scale: 1 };
+      case 'separator': return globalState.separatorConfig || { x: 0, y: 0, scale: 1 };
     }
   };
 
-  const handlePromoteSelected = () => {
-    // DOPPIO CONTROLLO: Solo 1 elemento deve essere selezionato
-    if (selectedIds.length !== 1) return;
-    const cat = customCategories.find(c => c.id === selectedIds[0]);
-    if (!cat) return;
+  const handleParamChange = (key: 'x' | 'y' | 'scale', val: number) => {
+    switch(editFocus) {
+      case 'icon':
+        if (key === 'scale') setGlobalState({ ...globalState, iconScale: val });
+        else setGlobalState({ ...globalState, iconPos: { ...globalState.iconPos, [key]: val } });
+        break;
+      case 'sticker': setGlobalState({ ...globalState, stickerConfig: { ...globalState.stickerConfig, [key]: val } }); break;
+      case 'tagline': setGlobalState({ ...globalState, taglineConfig: { ...globalState.taglineConfig, [key]: val } }); break;
+      case 'separator': setGlobalState({ ...globalState, separatorConfig: { ...globalState.separatorConfig, [key]: val } }); break;
+    }
+  };
+
+  const renderArchiveIcon = (cat: CustomCategory, size: number = 18) => {
+    if (cat.customImage) return <img src={cat.customImage} className="object-contain" style={{ width: size, height: size }} />;
     
-    if (window.confirm(`Impostare "${cat.text1} ${cat.text2}" come Identità Ufficiale Studio?`)) {
-      if (onSetAsStudio) {
-        onSetAsStudio(cat);
-        alert("Identità Studio Aggiornata!");
-        setSelectedIds([]);
-      }
+    // Se l'icona è nascosta ma lo sticker è attivo, mostra lo sticker nell'anteprima
+    if (!cat.showIcon && cat.showSticker && cat.sticker) {
+      const stickerIcon = STICKER_LIST.find(s => s.id === cat.sticker)?.icon;
+      return stickerIcon ? React.cloneElement(stickerIcon, { size }) : <Star size={size} />;
     }
-  };
-
-  const SidebarHeader = ({ title, icon: Icon, section }: { title: string, icon: any, section: SubSection }) => (
-    <button onClick={() => setActiveSubSection(activeSubSection === section ? null : section)} className={`w-full flex items-center justify-between p-5 rounded-2xl transition-all ${activeSubSection === section ? 'bg-brand-accent/30 border border-brand-accent/50 text-white' : 'bg-white/5 border border-white/10 text-white/70 hover:bg-white/10'}`}>
-      <div className="flex items-center gap-4"><Icon size={20} /><span className="text-[11px] font-black uppercase tracking-widest">{title}</span></div>
-      {activeSubSection === section ? <ChevronDown size={18}/> : <ChevronRight size={18}/>}
-    </button>
-  );
-
-  const getVisualPreviewScale = () => {
-    if (logoSize === 'xl') return 0.22;
-    if (logoSize === 'lg') return 0.45;
-    return 1;
+    
+    const IconComp = ICON_MAP[cat.iconKey] || Palette;
+    return <IconComp size={size} />;
   };
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 pb-32">
-      <div className="flex justify-center mb-16">
-        <div className="flex bg-white/5 backdrop-blur-2xl p-2 rounded-full border border-white/20 shadow-2xl max-w-2xl w-full gap-2 relative z-[60]">
-          <button onClick={() => setActiveTab('editor')} className={`flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'editor' ? 'bg-brand-accent text-black' : 'text-white/60'}`}><PenTool size={18}/> Editor</button>
-          <button onClick={() => setActiveTab('showroom')} className={`flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'showroom' ? 'bg-brand-accent2 text-white' : 'text-white/60'}`}><Layout size={18}/> Vetrina</button>
-          <button 
-            onClick={() => { setActiveTab('saved'); setNewItemsBadge(0); }} 
-            className={`flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 relative ${activeTab === 'saved' ? 'bg-purple-600 text-white' : 'text-white/60'}`}
-          >
-            <Folder size={18}/> 
-            Archivio
-            {newItemsBadge > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] w-5 h-5 flex items-center justify-center rounded-full animate-bounce border-2 border-[#0f0c29]">{newItemsBadge}</span>}
-          </button>
-          <button 
-            onClick={saveCurrentAsCategory} 
-            className={`flex-1 py-4 rounded-full text-[11px] font-black uppercase transition-all flex items-center justify-center gap-2 shadow-lg transition-colors ${saveSuccess ? 'bg-green-500 text-white' : 'bg-white/10 text-white hover:bg-brand-accent hover:text-black'}`}
-          >
-            {saveSuccess ? <Check size={18} className="animate-bounce" /> : <Save size={18}/>}
-            {saveSuccess ? 'Salvato!' : 'Salva'}
-          </button>
+      {/* POPUP SELEZIONE LOGO STUDIO CON CONFERMA */}
+      {showIdentityPicker && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-fade-in">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-2xl" onClick={() => { setShowIdentityPicker(false); setPendingStudioLogo(null); }}></div>
+          <div className="relative w-full max-w-2xl bg-[#0f0c29] border border-white/20 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-8 border-b border-white/10 bg-black/60 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-yellow-500/20 rounded-2xl flex items-center justify-center text-yellow-500 shadow-xl"><Archive size={32} /></div>
+                <div>
+                  <h2 className="text-2xl font-black uppercase text-white tracking-widest leading-none">Cambia Logo Studio</h2>
+                  <p className="text-white font-black text-[12px] uppercase tracking-wider bg-white/20 px-3 py-1.5 rounded-lg mt-2 inline-block">Scegli la tua nuova identità ufficiale.</p>
+                </div>
+              </div>
+              <button onClick={() => { setShowIdentityPicker(false); setPendingStudioLogo(null); }} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-all text-white/50"><X size={28}/></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-[#050510]">
+              {customCategories.length === 0 ? <div className="py-24 text-center opacity-30 flex flex-col items-center gap-4"><Folder size={64} /><p className="text-sm font-black uppercase tracking-widest">L'archivio è vuoto. Salva un logo per vederlo qui.</p></div> : 
+                customCategories.map((cat) => (
+                  <button 
+                    key={cat.id} 
+                    onClick={() => setPendingStudioLogo(cat)} 
+                    className={`w-full flex items-center p-5 rounded-[2rem] border-2 transition-all group text-left shadow-xl ${pendingStudioLogo?.id === cat.id ? 'bg-brand-accent/20 border-brand-accent shadow-[0_0_30px_rgba(0,242,96,0.1)]' : 'bg-black/40 border-white/5 hover:border-white/20'}`}
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-black flex items-center justify-center shrink-0" style={{ color: cat.color }}>
+                      {renderArchiveIcon(cat, 32)}
+                    </div>
+                    <div className="ml-6 flex-1">
+                       <p className="text-xl font-black uppercase tracking-tight leading-none mb-1 text-white">
+                         {cat.text1}
+                         {cat.showSeparator && <span className="mx-2" style={{ color: cat.color }}>{cat.separatorText}</span>}
+                         <span style={{ color: cat.color }}>{cat.text2}</span>
+                       </p>
+                       <p className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">{cat.subtitle || 'LOGO SALVATO'}</p>
+                    </div>
+                    {pendingStudioLogo?.id === cat.id && <CheckCircle2 size={24} className="text-brand-accent ml-4 animate-bounce-in" />}
+                  </button>
+                ))
+              }
+            </div>
+            
+            {/* BARRA DI CONFERMA NEL POPUP */}
+            {pendingStudioLogo && (
+              <div className="p-6 border-t border-white/10 bg-black/80 animate-slide-up shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
+                <button 
+                  onClick={handleFinalIdentitySelection} 
+                  className="w-full py-5 rounded-2xl bg-brand-accent text-black font-black uppercase tracking-[0.2em] text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-3"
+                >
+                  <Check size={20}/> CONFERMA NUOVO LOGO STUDIO
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* NAVIGATION PRINCIPALE */}
+      <div className="flex justify-center mb-10">
+        <div className="flex flex-wrap bg-white/5 backdrop-blur-2xl p-2 rounded-3xl md:rounded-full border border-white/20 shadow-2xl w-full max-w-4xl gap-2 z-[60]">
+          <button onClick={() => setActiveTab('editor')} className={`flex-1 min-w-[100px] py-4 rounded-full text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'editor' ? 'bg-brand-accent text-black shadow-lg shadow-brand-accent/20' : 'text-white/60 hover:bg-white/5'}`}><PenTool size={16}/> Editor</button>
+          <button onClick={() => setActiveTab('saved')} className={`flex-1 min-w-[100px] py-4 rounded-full text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'saved' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'text-white/60 hover:bg-white/5'}`}><Folder size={16}/> Archivio</button>
+          
+          <div className="h-10 w-[1px] bg-white/10 self-center hidden md:block mx-1"></div>
+          
+          <button onClick={() => setShowIdentityPicker(true)} className="flex-1 min-w-[180px] py-4 px-6 rounded-full text-[10px] font-black uppercase transition-all flex items-center justify-center gap-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black shadow-lg hover:scale-105 active:scale-95"><Award size={18}/> CAMBIA TUO LOGO</button>
+          
+          <button onClick={saveCurrentAsCategory} className={`flex-1 min-w-[100px] py-4 rounded-full text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${saveSuccess ? 'bg-green-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}>{saveSuccess ? <Check size={16}/> : <Save size={16}/>} Salva nel Vault</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className={`lg:col-span-4 ${activeTab === 'showroom' ? 'hidden' : ''} space-y-4`}>
+        {/* SIDEBAR SINISTRA */}
+        <div className="lg:col-span-4 space-y-3">
           {activeTab === 'editor' && (
-            <div className="space-y-4 animate-fade-in">
-              <SidebarHeader title="Identità" icon={Fingerprint} section="identity" />
+            <div className="space-y-3">
+              <button onClick={() => setActiveSubSection(activeSubSection === 'identity' ? null : 'identity')} className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${activeSubSection === 'identity' ? 'bg-brand-accent/20 border-brand-accent' : 'bg-white/5 border-white/10'}`}>
+                <div className="flex items-center gap-3"><Fingerprint size={18}/><span className="text-[10px] font-black uppercase tracking-widest">Identità Visiva</span></div>
+                {activeSubSection === 'identity' ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+              </button>
               {activeSubSection === 'identity' && (
-                <div className="bg-[#1a1638] p-6 rounded-2xl border border-white/10 space-y-4 animate-slide-up">
-                  <div className="space-y-3 pb-4 border-b border-white/10">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Icona Intestazione</label>
-                      <div className="flex gap-2">
-                        <button onClick={() => setGlobalState({...globalState, showIcon: !globalState.showIcon})} className={`p-1.5 rounded-lg transition-all ${globalState.showIcon ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}>{globalState.showIcon ? <Eye size={14}/> : <EyeOff size={14}/>}</button>
-                        {(globalState.customImage || globalState.iconKey !== 'palette') && <button onClick={() => setGlobalState({...globalState, customImage: null, iconKey: 'palette'})} className="p-1.5 rounded-lg text-red-500 bg-red-500/10 hover:bg-red-500/20"><RefreshCw size={14}/></button>}
-                      </div>
-                    </div>
-                    <select value={globalState.iconKey} onChange={(e) => applyPreset(e.target.value)} className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none">
-                      <option value="">Cambia Preset Icona...</option>
-                      {PRESET_CATEGORIES.map(p => <option key={p.id} value={p.iconKey}>{p.label}</option>)}
-                      {Object.keys(BASE_ICONS).map(k => <option key={k} value={k}>{BASE_ICONS[k].label}</option>)}
+                <div className="bg-black/40 p-5 rounded-2xl border border-white/10 space-y-5 animate-slide-up">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-white/40 uppercase">Icona</label>
+                    <select value={globalState.iconKey} onChange={(e)=>{ setGlobalState({...globalState, iconKey: e.target.value, customImage: null, showIcon: true}); setEditFocus('icon'); }} className="w-full bg-black border border-white/20 rounded-xl p-3 text-xs text-brand-accent">
+                      {PRESET_CATEGORIES.map(p=><option key={p.id} value={p.iconKey}>{p.label}</option>)}
+                      {Object.keys(ICON_MAP).map(k=><option key={k} value={k}>{ICON_LABELS[k] || k}</option>)}
                     </select>
                   </div>
-                  <div className="flex gap-2">
-                    <input type="text" value={globalState.text1} onChange={(e) => setGlobalState({...globalState, text1: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-white" placeholder="TESTO 1" />
-                    <input type="text" value={globalState.text2} onChange={(e) => setGlobalState({...globalState, text2: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-white" placeholder="TESTO 2" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="text" value={globalState.text1} onChange={(e)=>setGlobalState({...globalState, text1: e.target.value.toUpperCase()})} className="bg-black border border-white/20 rounded-xl p-4 text-center font-black text-white text-xs" placeholder="TESTO 1" />
+                    <input type="text" value={globalState.text2} onChange={(e)=>setGlobalState({...globalState, text2: e.target.value.toUpperCase()})} className="bg-black border border-white/20 rounded-xl p-4 text-center font-black text-white text-xs" placeholder="TESTO 2" />
                   </div>
-                  <div className="space-y-3 pb-4 border-b border-white/10">
-                    <div className="flex items-center justify-between"><label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Separatore</label><button onClick={() => setGlobalState({...globalState, showSeparator: !globalState.showSeparator})} className={`p-1.5 rounded-lg transition-all ${globalState.showSeparator ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}>{globalState.showSeparator ? <Eye size={14}/> : <EyeOff size={14}/>}</button></div>
-                    <select value={globalState.separatorText} onChange={(e) => setGlobalState({...globalState, separatorText: e.target.value, showSeparator: true})} className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs font-bold text-brand-accent outline-none">{SEPARATOR_PRESETS.map(sep => (<option key={sep.value} value={sep.value}>{sep.label}</option>))}</select>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-white/40 uppercase">Separatore</label>
+                    <select value={globalState.separatorText} onChange={(e)=>{ setGlobalState({...globalState, separatorText: e.target.value, showSeparator: true}); setEditFocus('separator'); }} className="w-full bg-black border border-white/20 rounded-xl p-3 text-xs text-brand-accent">
+                      {SEPARATOR_PRESETS.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between"><label className="text-[10px] text-white/50 uppercase font-black tracking-widest">Tagline</label><div className="flex gap-2"><button onClick={() => setGlobalState({...globalState, showSubtitle: !globalState.showSubtitle})} className={`p-1.5 rounded-lg transition-all ${globalState.showSubtitle ? 'text-brand-accent bg-brand-accent/10' : 'text-white/20 bg-white/5'}`}>{globalState.showSubtitle ? <Eye size={14}/> : <EyeOff size={14}/>}</button>{globalState.subtitle && <button onClick={() => setGlobalState({...globalState, subtitle: ''})} className="p-1.5 rounded-lg text-red-500 bg-red-500/10"><Trash2 size={14}/></button>}</div></div>
-                    <input type="text" value={globalState.subtitle} onChange={(e) => setGlobalState({...globalState, subtitle: e.target.value.toUpperCase()})} className="w-full bg-black/60 border border-white/20 rounded-xl p-4 text-center font-black text-xs text-brand-accent" placeholder="SCRIVI QUI..." />
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black text-white/40 uppercase">Tagline</label>
+                    <input type="text" value={globalState.subtitle} onClick={()=>setEditFocus('tagline')} onChange={(e)=>setGlobalState({...globalState, subtitle: e.target.value.toUpperCase()})} className="w-full bg-black border border-white/20 rounded-xl p-4 text-center font-black text-brand-accent text-[10px]" placeholder="SOTTOTITOLO" />
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {NEON_COLORS.map(c=><button key={c} onClick={()=>setGlobalState({...globalState, color: c})} className={`w-7 h-7 rounded-full shrink-0 border-2 transition-all ${globalState.color === c ? 'border-white scale-125 shadow-[0_0_10px_#fff]' : 'border-transparent opacity-40'}`} style={{backgroundColor: c}} />)}
                   </div>
                 </div>
               )}
-              <SidebarHeader title="Icona AI" icon={ImageIcon} section="ai" />
+
+              <button onClick={() => setActiveSubSection(activeSubSection === 'ai' ? null : 'ai')} className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${activeSubSection === 'ai' ? 'bg-brand-accent/20 border-brand-accent' : 'bg-white/5 border-white/10'}`}>
+                <div className="flex items-center gap-3"><Sparkles size={18}/><span className="text-[10px] font-black uppercase tracking-widest">Icona AI</span></div>
+                {activeSubSection === 'ai' ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+              </button>
               {activeSubSection === 'ai' && (
-                <div className="bg-[#1a1638] p-6 rounded-2xl border border-white/10 space-y-6 animate-slide-up">
-                  <div className="flex gap-2"><input type="text" value={iconPrompt} onChange={(e) => setIconPrompt(e.target.value)} className="flex-1 bg-black/60 border border-white/20 rounded-xl p-3 text-sm text-white" placeholder="Descrivi icona AI..." /><button onClick={handleIconGenerate} disabled={isGeneratingIcon} className="bg-brand-accent text-black p-3 rounded-xl hover:scale-105 transition-all">{isGeneratingIcon ? <RefreshCw className="animate-spin" size={18}/> : <Sparkles size={18}/>}</button></div>
-                  <div className="space-y-4"><div className="flex justify-between text-[10px] font-black text-white/50 uppercase"><span>Scala Icona</span><span>{globalState.iconScale.toFixed(1)}x</span></div><input type="range" min="0.3" max="3.0" step="0.1" value={globalState.iconScale} onChange={(e) => setGlobalState({...globalState, iconScale: parseFloat(e.target.value)})} className="w-full h-1 accent-brand-accent bg-white/10 rounded-full" /><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><span className="text-[9px] font-black text-white/30 uppercase">Pos X</span><input type="range" min="-100" max="100" value={globalState.iconPos.x} onChange={(e) => setGlobalState({...globalState, iconPos: {...globalState.iconPos, x: parseInt(e.target.value)}})} className="w-full accent-brand-accent bg-white/10 h-1" /></div><div className="space-y-2"><span className="text-[9px] font-black text-white/30 uppercase">Pos Y</span><input type="range" min="-100" max="100" value={globalState.iconPos.y} onChange={(e) => setGlobalState({...globalState, iconPos: {...globalState.iconPos, y: parseInt(e.target.value)}})} className="w-full accent-brand-accent bg-white/10 h-1" /></div></div></div>
+                <div className="bg-black/40 p-5 rounded-2xl border border-white/10 space-y-4 animate-slide-up">
+                  <div className="flex gap-2">
+                    <input type="text" value={iconPrompt} onChange={(e)=>setIconPrompt(e.target.value)} className="flex-1 bg-black border border-white/20 rounded-xl p-3 text-xs text-white" placeholder="Soggetto AI..." />
+                    <button onClick={handleIconGenerate} disabled={isGeneratingIcon} className="bg-brand-accent text-black p-3 rounded-xl hover:scale-105 active:scale-95 transition-all">{isGeneratingIcon ? <RefreshCw className="animate-spin" size={16}/> : <Sparkles size={16}/>}</button>
+                  </div>
                 </div>
               )}
-              <SidebarHeader title="Stickers" icon={Star} section="stickers" />
+
+              <button onClick={() => setActiveSubSection(activeSubSection === 'stickers' ? null : 'stickers')} className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${activeSubSection === 'stickers' ? 'bg-brand-accent/20 border-brand-accent' : 'bg-white/5 border-white/10'}`}>
+                <div className="flex items-center gap-3"><Star size={18}/><span className="text-[10px] font-black uppercase tracking-widest">Stickers</span></div>
+                {activeSubSection === 'stickers' ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+              </button>
               {activeSubSection === 'stickers' && (
-                <div className="bg-[#1a1638] p-6 rounded-2xl border border-white/10 space-y-6 animate-slide-up">
-                   <div className="flex gap-2 flex-wrap">{STICKER_LIST.map(stk => (<button key={stk.id} onClick={() => setSelectedSticker(stk.id)} className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all ${selectedSticker === stk.id ? 'bg-brand-accent/20 border-brand-accent text-brand-accent' : 'border-white/10 text-white/40'}`}>{stk.icon}</button>))}{selectedSticker && <button onClick={() => setSelectedSticker(null)} className="text-red-500 p-2"><Trash2 size={16}/></button>}</div>
-                   {selectedSticker && (<div className="space-y-4 pt-4 border-t border-white/5"><input type="range" min="0.5" max="5.0" step="0.1" value={stickerPos.scale} onChange={(e) => setStickerPos({...stickerPos, scale: parseFloat(e.target.value)})} className="w-full accent-yellow-400" /><div className="grid grid-cols-2 gap-2"><input type="range" min="-300" max="300" value={stickerPos.x} onChange={(e) => setStickerPos({...stickerPos, x: parseInt(e.target.value)})} className="w-full" /><input type="range" min="-200" max="200" value={stickerPos.y} onChange={(e) => setStickerPos({...stickerPos, y: parseInt(e.target.value)})} className="w-full" /></div></div>)}
+                <div className="bg-black/40 p-5 rounded-2xl border border-white/10 flex flex-wrap gap-2 justify-center animate-slide-up">
+                  {STICKER_LIST.map(s=>(
+                    <button key={s.id} onClick={()=>handleStickerClick(s.id)} className={`w-11 h-11 flex items-center justify-center rounded-xl border transition-all ${globalState.sticker === s.id ? 'bg-brand-accent text-black border-brand-accent shadow-lg shadow-brand-accent/20' : 'border-white/10 text-white/40 hover:border-white/30'}`}>{s.icon}</button>
+                  ))}
                 </div>
               )}
-              <SidebarHeader title="Stile" icon={Settings2} section="style" />
-              {activeSubSection === 'style' && (
-                <div className="bg-[#1a1638] p-6 rounded-2xl border border-white/10 space-y-6 animate-slide-up">
-                  <select value={globalState.font} onChange={(e) => setGlobalState({...globalState, font: e.target.value})} className="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs text-brand-accent">{FONT_OPTIONS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}</select>
-                  <div className="flex gap-2 overflow-x-auto pb-2">{NEON_COLORS.map(c => <button key={c} onClick={() => setGlobalState({...globalState, color: c})} className={`w-6 h-6 rounded-full border shrink-0 ${globalState.color === c ? 'scale-125 border-white' : 'border-transparent'}`} style={{ backgroundColor: c }} />)}</div>
+
+              <button onClick={() => setActiveSubSection(activeSubSection === 'advanced' ? null : 'advanced')} className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${activeSubSection === 'advanced' ? 'bg-yellow-500/20 border-yellow-500/40' : 'bg-white/5 border-white/10'}`}>
+                <div className="flex items-center gap-3 text-yellow-500"><Settings2 size={18}/><span className="text-[10px] font-black uppercase tracking-widest">Avanzate & Funzioni</span></div>
+                {activeSubSection === 'advanced' ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+              </button>
+              {activeSubSection === 'advanced' && (
+                <div className="bg-black/60 p-5 rounded-2xl border border-yellow-500/20 space-y-6 animate-slide-up shadow-2xl overflow-hidden">
+                  <div className="grid grid-cols-4 gap-2">
+                    <button onClick={() => setEditFocus('icon')} className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all ${editFocus === 'icon' ? 'bg-brand-accent border-brand-accent text-black' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                       <div className="flex items-center gap-1"><Palette size={12}/> <span onClick={(e)=>{e.stopPropagation(); setGlobalState({...globalState, showIcon: !globalState.showIcon})}}>{globalState.showIcon ? <Eye size={12}/> : <EyeOff size={12}/>}</span></div>
+                       <span className="text-[7px] font-black uppercase">Icona</span>
+                    </button>
+                    <button onClick={() => setEditFocus('separator')} className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all ${editFocus === 'separator' ? 'bg-brand-accent border-brand-accent text-black' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                       <div className="flex items-center gap-1"><Hash size={12}/> <span onClick={(e)=>{e.stopPropagation(); setGlobalState({...globalState, showSeparator: !globalState.showSeparator})}}>{globalState.showSeparator ? <Eye size={12}/> : <EyeOff size={12}/>}</span></div>
+                       <span className="text-[7px] font-black uppercase">Separa</span>
+                    </button>
+                    <button onClick={() => setEditFocus('tagline')} className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all ${editFocus === 'tagline' ? 'bg-brand-accent border-brand-accent text-black' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                       <div className="flex items-center gap-1"><Type size={12}/> <span onClick={(e)=>{e.stopPropagation(); setGlobalState({...globalState, showSubtitle: !globalState.showSubtitle})}}>{globalState.showSubtitle ? <Eye size={12}/> : <EyeOff size={12}/>}</span></div>
+                       <span className="text-[7px] font-black uppercase">Tagline</span>
+                    </button>
+                    <button onClick={() => setEditFocus('sticker')} disabled={!globalState.sticker} className={`flex flex-col items-center justify-center gap-2 p-2 rounded-xl border transition-all disabled:opacity-20 ${editFocus === 'sticker' ? 'bg-brand-accent border-brand-accent text-black' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                       <div className="flex items-center gap-1"><Star size={12}/> <span onClick={(e)=>{e.stopPropagation(); if(globalState.sticker) setGlobalState({...globalState, showSticker: !globalState.showSticker})}}>{globalState.showSticker ? <Eye size={12}/> : <EyeOff size={12}/>}</span></div>
+                       <span className="text-[7px] font-black uppercase">Sticker</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-4 border-t border-white/10 pt-5 animate-slide-up" key={editFocus}>
+                    <label className="text-[8px] font-black text-yellow-500 uppercase tracking-widest flex items-center justify-between">
+                      <span>Funzioni Relativa: {getFocusLabel()}</span>
+                      {editFocus === 'sticker' && <button onClick={clearSticker} className="text-red-400 hover:text-red-300"><Trash2 size={12}/></button>}
+                    </label>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-[7px] font-bold text-white/30 uppercase">
+                          <span>Scala Elemento</span>
+                          <span className="text-brand-accent">{getActiveConfig().scale.toFixed(1)}x</span>
+                        </div>
+                        <input type="range" min="0.1" max="5" step="0.1" value={getActiveConfig().scale} onChange={(e)=>handleParamChange('scale', parseFloat(e.target.value))} className="w-full accent-brand-accent h-1.5 cursor-pointer" />
+                      </div>
+                      {editFocus !== 'separator' && (
+                        <div className="grid grid-cols-2 gap-4 animate-slide-up">
+                          <div className="space-y-1">
+                            <label className="text-[7px] font-bold text-white/30 uppercase flex items-center gap-1"><Move size={8}/> Posizione X</label>
+                            <input type="range" min="-300" max="300" value={getActiveConfig().x} onChange={(e)=>handleParamChange('x', parseInt(e.target.value))} className="w-full accent-white h-1.5 cursor-pointer" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[7px] font-bold text-white/30 uppercase flex items-center gap-1"><Move size={8}/> Posizione Y</label>
+                            <input type="range" min="-300" max="300" value={getActiveConfig().y} onChange={(e)=>handleParamChange('y', parseInt(e.target.value))} className="w-full accent-white h-1.5 cursor-pointer" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button onClick={resetPositions} className="w-full flex items-center justify-center gap-3 p-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-white/50 transition-all active:scale-95 shadow-lg"><RotateCcw size={16}/> <span className="text-[10px] font-black uppercase tracking-widest">Reset Master</span></button>
                 </div>
               )}
             </div>
           )}
-
           {activeTab === 'saved' && (
-            <div className="bg-[#1a1638] p-1 rounded-2xl border border-white/10 flex flex-col h-[600px] animate-fade-in relative overflow-hidden shadow-2xl">
-              
-              {/* BARRA DI CONTROLLO FISSA */}
-              <div className="p-4 border-b border-white/10 bg-black/40 backdrop-blur-md z-30">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[10px] font-black uppercase text-purple-400 tracking-widest px-2 flex items-center gap-2">
-                    <Folder size={14}/> Archivio Personale
-                  </h3>
-                  {selectedIds.length > 0 && (
-                    <button onClick={() => setSelectedIds([])} className="text-white/40 hover:text-white flex items-center gap-1 text-[8px] font-black uppercase">
-                      Annulla <X size={12}/>
-                    </button>
-                  )}
-                </div>
-
-                <div className={`transition-all duration-300 ${selectedIds.length > 0 ? 'opacity-100 translate-y-0 h-auto' : 'opacity-0 translate-y-[-10px] pointer-events-none h-0 overflow-hidden'}`}>
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* AWARD: Attivo solo se selezione === 1 */}
-                    <button 
-                      onClick={handlePromoteSelected}
-                      disabled={selectedIds.length !== 1}
-                      className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl transition-all shadow-lg ${
-                        selectedIds.length === 1 
-                        ? 'bg-yellow-500 text-black hover:scale-105 active:scale-95' 
-                        : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/10'
-                      }`}
-                    >
-                      <Award size={18}/>
-                      <span className="text-[8px] font-black uppercase">
-                        {selectedIds.length > 1 ? 'Solo 1 per Award' : 'Imposta Studio'}
-                      </span>
-                    </button>
-
-                    {/* TRASH: Sempre attivo se selezione > 0 */}
-                    <button 
-                      onClick={handleDeleteSelected}
-                      className="flex flex-col items-center justify-center gap-1 p-3 bg-red-500 text-white rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg"
-                    >
-                      <Trash2 size={18}/>
-                      <span className="text-[8px] font-black uppercase">Elimina ({selectedIds.length})</span>
-                    </button>
-                  </div>
-                  
-                  {selectedIds.length > 1 && (
-                    <div className="mt-2 flex items-center justify-center gap-2 text-[8px] font-black text-yellow-500/60 uppercase text-center animate-pulse">
-                      <AlertCircle size={10}/> Deseleziona per abilitare Award
-                    </div>
-                  )}
-                </div>
-                
-                {selectedIds.length === 0 && (
-                  <div className="py-2 text-center">
-                    <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Tocca i loghi per selezionare</p>
-                  </div>
-                )}
+            <div className="bg-[#1a1638] rounded-2xl border border-white/10 flex flex-col h-[600px] overflow-hidden shadow-2xl">
+              <div className="p-4 border-b border-white/10 bg-black/60 space-y-4">
+                 <div className="flex items-center justify-between">
+                   <div className="flex items-center gap-2">
+                     <Folder size={14} className="text-white/50" />
+                     <h3 className="text-[10px] font-black uppercase text-white/50 tracking-widest">I Tuoi Loghi</h3>
+                   </div>
+                   {customCategories.length > 0 && (
+                     <button onClick={handleMasterToggle} className={`w-9 h-9 flex items-center justify-center rounded-xl border transition-all ${selectedIds.length === customCategories.length ? 'bg-brand-accent border-brand-accent text-black' : 'bg-white/5 border-white/10 text-white/20'}`}>
+                       {selectedIds.length === customCategories.length ? <CheckSquare size={18} /> : <Square size={18} />}
+                     </button>
+                   )}
+                 </div>
+                 {selectedIds.length > 0 && (<div className="flex gap-2 animate-slide-up"><button onClick={handleDeleteSelected} className={`flex-1 p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center justify-center gap-2`}><Trash2 size={14}/> <span className="text-[8px] font-black uppercase">Elimina Selezione</span></button></div>)}
               </div>
-
-              {/* LISTA SCORREVOLE */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                {customCategories.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-20">
-                    <Folder size={48} />
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em]">Nessun logo salvato</p>
-                  </div>
-                )}
-                
-                {customCategories.map((cat, idx) => {
-                  // Verifica ID univoco
-                  const logoId = cat.id || `fallback_${idx}`;
-                  const isSelected = selectedIds.includes(logoId);
-                  
-                  return (
-                    <button 
-                      key={logoId}
-                      onClick={() => toggleSelection(logoId)}
-                      className={`w-full flex items-center p-4 rounded-2xl transition-all text-left overflow-hidden border-2 relative group ${
-                        isSelected 
-                          ? 'bg-brand-accent/20 border-brand-accent shadow-[0_0_25px_rgba(0,242,96,0.3)]' 
-                          : 'bg-black/40 border-white/5 hover:border-white/20'
-                      }`}
-                    >
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-black/60 shadow-inner overflow-hidden" style={{ color: cat.color }}>
-                        {cat.customImage ? (
-                          <img src={cat.customImage} className="w-10 h-10 rounded-lg object-cover" />
-                        ) : (
-                          BASE_ICONS[cat.iconKey]?.component || <ImageIcon size={24}/>
-                        )}
+                {customCategories.length === 0 ? <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-20"><Folder size={48} /><p className="text-[8px] font-black uppercase tracking-widest">Vuoto</p></div> : 
+                  customCategories.map((cat) => (
+                    <div key={cat.id} onClick={() => handleRowClick(cat)} className={`w-full flex items-center p-3 rounded-xl border-2 transition-all cursor-pointer group ${selectedIds.includes(cat.id) ? 'bg-brand-accent/15 border-brand-accent shadow-lg shadow-brand-accent/5' : 'bg-black/30 border-white/5 hover:border-white/10'}`}>
+                      <div className="w-10 h-10 rounded-lg bg-black flex items-center justify-center shrink-0" style={{ color: cat.color }}>
+                        {renderArchiveIcon(cat, 18)}
                       </div>
-                      
-                      <div className="ml-5 flex-1 overflow-hidden">
-                        <p className={`text-[11px] font-black uppercase truncate tracking-tight ${isSelected ? 'text-brand-accent' : 'text-white'}`}>
-                          {cat.text1} {cat.text2}
+                      <div className="ml-4 flex-1 text-left">
+                        <p className="text-[10px] font-black uppercase truncate text-white">
+                          {cat.text1}
+                          {cat.showSeparator && <span className="mx-1" style={{ color: cat.color }}>{cat.separatorText}</span>}
+                          <span style={{ color: cat.color }}>{cat.text2}</span>
                         </p>
-                        <p className="text-[8px] font-bold text-white/30 uppercase truncate mt-0.5">
-                          {cat.subtitle || 'PROGETTO STUDIO'}
-                        </p>
+                        <p className="text-[7px] font-bold text-white/30 uppercase truncate">{cat.subtitle}</p>
                       </div>
-
-                      <div className={`ml-3 transition-all duration-300 ${isSelected ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
-                        <div className="bg-brand-accent text-black rounded-full p-1 shadow-[0_0_10px_#00f260]">
-                          <CheckCircle2 size={16} />
-                        </div>
-                      </div>
-                      
-                      {!isSelected && (
-                        <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <MousePointer2 size={14} className="text-white/20" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+                      <button onClick={(e) => toggleSelection(e, cat)} className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${selectedIds.includes(cat.id) ? 'bg-brand-accent text-black shadow-inner' : 'bg-white/5 text-transparent border border-white/10'}`}><Check size={14} /></button>
+                    </div>
+                  ))
+                }
               </div>
             </div>
           )}
         </div>
 
-        <div className={`${activeTab === 'showroom' ? 'lg:col-span-12' : 'lg:col-span-8'} flex flex-col items-center`}>
-          <div className="relative w-full aspect-[12/7] rounded-[3rem] border border-white/10 flex flex-col items-center justify-center p-8 transition-all shadow-2xl overflow-hidden" style={{ backgroundColor: previewBg }}>
-            {activeTab === 'showroom' && (<div className="absolute top-8 flex bg-black/50 p-1 rounded-full border border-white/10 z-20">{['neon', 'totem', 'card'].map(t => (<button key={t} onClick={() => setShowroomType(t as any)} className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${showroomType === t ? 'bg-white text-black' : 'text-white/40'}`}>{t}</button>))}</div>)}
-            <div className="flex items-center justify-center w-full h-full relative" style={{ overflow: 'visible' }}>
-              <div id="preview-scaler" style={{ transform: `scale(${getVisualPreviewScale()})`, transformOrigin: 'center center', transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)', display: 'flex', alignItems: 'center', justifySelf: 'center', width: 'fit-content', height: 'fit-content' }}>
-                <BrandLogo id="active-logo-canvas" size={activeTab === 'showroom' ? 'xl' : logoSize} {...globalState} customIcon={BASE_ICONS[globalState.iconKey]?.component} customImageSrc={globalState.customImage} customColor={globalState.color} theme={logoTheme} sticker={selectedSticker} stickerConfig={stickerPos} />
+        {/* AREA DI PREVIEW CENTRALE */}
+        <div className="lg:col-span-8 flex flex-col items-center">
+          <div className="relative w-full aspect-video rounded-[3rem] border-4 border-white/10 flex flex-col items-center justify-center p-8 shadow-2xl overflow-hidden bg-[#0a0a1a]">
+            <div id="preview-scaler" className="relative z-10 transition-transform duration-100 ease-linear" style={{ transform: `scale(${previewScale * (logoSize === 'xl' ? 0.05 : logoSize === 'lg' ? 0.2 : 1)})`, transformOrigin: 'center center' }}>
+               <BrandLogo id="active-logo-canvas" {...globalState} size={logoSize} sticker={globalState.showSticker ? globalState.sticker : null} stickerConfig={globalState.stickerConfig} />
+            </div>
+
+            <div className="absolute top-6 right-6 flex items-center gap-6 bg-black/60 backdrop-blur-md px-6 py-3 rounded-3xl border border-white/10 z-40 shadow-2xl animate-fade-in">
+              <div className="flex flex-col gap-1 items-start min-w-[140px]">
+                <label className="text-[7px] font-black text-brand-accent uppercase tracking-[0.2em] flex items-center gap-1">
+                  <Maximize2 size={8}/> Scala Preview
+                </label>
+                <input 
+                  type="range" 
+                  min="0.1" 
+                  max="5.0" 
+                  step="0.1" 
+                  value={previewScale} 
+                  onChange={(e) => setPreviewScale(parseFloat(e.target.value))} 
+                  className="w-full accent-brand-accent h-1 cursor-pointer" 
+                />
+              </div>
+              <div className="w-[1px] h-8 bg-white/10"></div>
+              <div className="flex gap-1.5">
+                {['sm', 'md', 'lg', 'xl'].map(s => (
+                  <button 
+                    key={s} 
+                    onClick={() => setLogoSize(s as any)} 
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all ${logoSize === s ? 'bg-brand-accent text-black border-brand-accent shadow-lg shadow-brand-accent/20' : 'bg-black/40 text-white/40 border-white/10 hover:border-white/30'}`}
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
             </div>
-            {activeTab === 'editor' && (
-              <div className="absolute bottom-6 flex flex-wrap justify-center gap-4 bg-black/60 backdrop-blur-xl p-3 rounded-full border border-white/20 z-30">
-                <div className="flex gap-2 px-3 border-r border-white/10">{BG_PRESETS.map(bg => <button key={bg.hex} onClick={() => {setPreviewBg(bg.hex); setLogoTheme(bg.theme as any)}} className="w-4 h-4 rounded-full" style={{ backgroundColor: bg.hex }} />)}</div>
-                <div className="flex gap-1 px-3 border-r border-white/10">{['sm', 'md', 'lg', 'xl'].map(s => <button key={s} onClick={() => syncSize(s as any)} className={`px-3 py-1 text-[8px] font-black rounded-lg ${logoSize === s ? 'bg-brand-accent text-black' : 'text-white'}`}>{s.toUpperCase()}</button>)}</div>
-                <div className="flex items-center gap-4 px-3"><span className="text-[8px] font-black text-white/50">{pixelSize}PX</span><input type="range" min="400" max="4000" step="100" value={pixelSize} onChange={(e)=>setPixelSize(parseInt(e.target.value))} className="w-20" /><button onClick={downloadLogo} disabled={isExporting} className="bg-brand-accent text-black p-2 rounded-full hover:scale-110 transition-all">{isExporting ? <RefreshCw className="animate-spin" size={16}/> : <Download size={16} />}</button></div>
-              </div>
-            )}
-            {activeTab === 'showroom' && (<div className="absolute bottom-8 text-center animate-fade-in z-30"><h4 className="text-brand-accent text-[12px] font-black uppercase tracking-[0.4em] mb-1">{SHOWROOM_DESCRIPTIONS[showroomType].title}</h4><p className="text-white/60 text-xs italic">{SHOWROOM_DESCRIPTIONS[showroomType].text}</p></div>)}
+            <div className="absolute bottom-6 flex gap-4 bg-black/80 p-3 rounded-full border border-white/20 z-30"><button onClick={downloadLogo} className="bg-brand-accent text-black px-8 py-2.5 rounded-full font-black text-[10px] uppercase flex items-center gap-2 hover:scale-105 transition-all shadow-xl shadow-brand-accent/20"><Download size={14}/> Scarica PNG</button></div>
           </div>
         </div>
       </div>
