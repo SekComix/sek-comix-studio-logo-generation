@@ -44,8 +44,8 @@ export const editImageWithGemini = async (base64Image: string, mimeType: string,
 export const generateIconImage = async (prompt: string, brandColor: string): Promise<string> => {
   const ai = getAiClient();
   try {
-    // CAMBIO FONDAMENTALE: chiediamo fondo nero per poterlo rendere trasparente nel CSS
-    const aiPrompt = `Flat vector logo icon of ${prompt}. Minimalist, professional, sharp clean edges. Color palette: ${brandColor}. IMPORTANT: The icon must be isolated on a solid DEEP BLACK background. NO TEXT, NO LETTERS, NO WORDS.`;
+    // Chiediamo esplicitamente un fondo nero profondo (DEEP BLACK) per la trasparenza CSS 'screen'
+    const aiPrompt = `Flat vector logo icon of ${prompt}. Minimalist, professional, sharp clean edges. Color palette: ${brandColor}. IMPORTANT: The icon must be isolated on a solid, uniform DEEP BLACK background. NO TEXT, NO LETTERS, NO WORDS, NO BORDERS.`;
     
     const result = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
