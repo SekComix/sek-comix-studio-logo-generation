@@ -249,7 +249,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 pb-32">
-      {/* POPUP SELEZIONE LOGO STUDIO CON CONFERMA */}
       {showIdentityPicker && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-fade-in">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-2xl" onClick={() => { setShowIdentityPicker(false); setPendingStudioLogo(null); }}></div>
@@ -288,8 +287,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
                 ))
               }
             </div>
-            
-            {/* BARRA DI CONFERMA NEL POPUP */}
             {pendingStudioLogo && (
               <div className="p-6 border-t border-white/10 bg-black/80 animate-slide-up shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
                 <button 
@@ -304,7 +301,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
         </div>
       )}
 
-      {/* NAVIGATION PRINCIPALE */}
       <div className="flex justify-center mb-10">
         <div className="flex flex-wrap bg-white/5 backdrop-blur-2xl p-2 rounded-3xl md:rounded-full border border-white/20 shadow-2xl w-full max-w-4xl gap-2 z-[60]">
           <button onClick={() => setActiveTab('editor')} className={`flex-1 min-w-[100px] py-4 rounded-full text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${activeTab === 'editor' ? 'bg-brand-accent text-black shadow-lg shadow-brand-accent/20' : 'text-white/60 hover:bg-white/5'}`}><PenTool size={16}/> Editor</button>
@@ -354,7 +350,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
                   </div>
                 </div>
               )}
-
               <button onClick={() => setActiveSubSection(activeSubSection === 'ai' ? null : 'ai')} className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${activeSubSection === 'ai' ? 'bg-brand-accent/20 border-brand-accent' : 'bg-white/5 border-white/10'}`}>
                 <div className="flex items-center gap-3"><Sparkles size={18}/><span className="text-[10px] font-black uppercase tracking-widest">Icona AI</span></div>
                 {activeSubSection === 'ai' ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
@@ -367,7 +362,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
                   </div>
                 </div>
               )}
-
               <button onClick={() => setActiveSubSection(activeSubSection === 'stickers' ? null : 'stickers')} className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${activeSubSection === 'stickers' ? 'bg-brand-accent/20 border-brand-accent' : 'bg-white/5 border-white/10'}`}>
                 <div className="flex items-center gap-3"><Star size={18}/><span className="text-[10px] font-black uppercase tracking-widest">Stickers</span></div>
                 {activeSubSection === 'stickers' ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
@@ -379,7 +373,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
                   ))}
                 </div>
               )}
-
               <button onClick={() => setActiveSubSection(activeSubSection === 'advanced' ? null : 'advanced')} className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${activeSubSection === 'advanced' ? 'bg-yellow-500/20 border-yellow-500/40' : 'bg-white/5 border-white/10'}`}>
                 <div className="flex items-center gap-3 text-yellow-500"><Settings2 size={18}/><span className="text-[10px] font-black uppercase tracking-widest">Avanzate & Funzioni</span></div>
                 {activeSubSection === 'advanced' ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
@@ -404,7 +397,6 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
                        <span className="text-[7px] font-black uppercase">Sticker</span>
                     </button>
                   </div>
-
                   <div className="space-y-4 border-t border-white/10 pt-5 animate-slide-up" key={editFocus}>
                     <label className="text-[8px] font-black text-yellow-500 uppercase tracking-widest flex items-center justify-between">
                       <span>Funzioni Relativa: {getFocusLabel()}</span>
@@ -476,39 +468,22 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
             </div>
           )}
         </div>
-
-        {/* AREA DI PREVIEW CENTRALE */}
         <div className="lg:col-span-8 flex flex-col items-center">
           <div className="relative w-full aspect-video rounded-[3rem] border-4 border-white/10 flex flex-col items-center justify-center p-8 shadow-2xl overflow-hidden bg-[#0a0a1a]">
             <div id="preview-scaler" className="relative z-10 transition-transform duration-100 ease-linear" style={{ transform: `scale(${previewScale * (logoSize === 'xl' ? 0.05 : logoSize === 'lg' ? 0.2 : 1)})`, transformOrigin: 'center center' }}>
                <BrandLogo id="active-logo-canvas" {...globalState} size={logoSize} sticker={globalState.showSticker ? globalState.sticker : null} stickerConfig={globalState.stickerConfig} />
             </div>
-
             <div className="absolute top-6 right-6 flex items-center gap-6 bg-black/60 backdrop-blur-md px-6 py-3 rounded-3xl border border-white/10 z-40 shadow-2xl animate-fade-in">
               <div className="flex flex-col gap-1 items-start min-w-[140px]">
                 <label className="text-[7px] font-black text-brand-accent uppercase tracking-[0.2em] flex items-center gap-1">
                   <Maximize2 size={8}/> Scala Preview
                 </label>
-                <input 
-                  type="range" 
-                  min="0.1" 
-                  max="5.0" 
-                  step="0.1" 
-                  value={previewScale} 
-                  onChange={(e) => setPreviewScale(parseFloat(e.target.value))} 
-                  className="w-full accent-brand-accent h-1 cursor-pointer" 
-                />
+                <input type="range" min="0.1" max="5.0" step="0.1" value={previewScale} onChange={(e) => setPreviewScale(parseFloat(e.target.value))} className="w-full accent-brand-accent h-1 cursor-pointer" />
               </div>
               <div className="w-[1px] h-8 bg-white/10"></div>
               <div className="flex gap-1.5">
                 {['sm', 'md', 'lg', 'xl'].map(s => (
-                  <button 
-                    key={s} 
-                    onClick={() => setLogoSize(s as any)} 
-                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all ${logoSize === s ? 'bg-brand-accent text-black border-brand-accent shadow-lg shadow-brand-accent/20' : 'bg-black/40 text-white/40 border-white/10 hover:border-white/30'}`}
-                  >
-                    {s}
-                  </button>
+                  <button key={s} onClick={() => setLogoSize(s as any)} className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase border transition-all ${logoSize === s ? 'bg-brand-accent text-black border-brand-accent shadow-lg shadow-brand-accent/20' : 'bg-black/40 text-white/40 border-white/10 hover:border-white/30'}`}>{s}</button>
                 ))}
               </div>
             </div>
