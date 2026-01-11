@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { BrandLogo } from './components/BrandLogo';
 import ImageEditor from './components/ImageEditor';
@@ -19,16 +20,19 @@ const DEFAULT_STUDIO_BRAND = {
   showIcon: true,
   showSeparator: true,
   showSubtitle: true,
-  separatorText: '+'
+  separatorText: '+',
+  sticker: null as string | null,
+  showSticker: false,
+  stickerConfig: { x: 0, y: 0, scale: 1 },
+  taglineConfig: { x: 0, y: 0, scale: 1 },
+  separatorConfig: { x: 0, y: 0, scale: 1 }
 };
 
 const App: React.FC = () => {
   const [view, setView] = useState<'marketing' | 'design'>('marketing');
   
-  // Stato 1: IDENTITÀ DELLO STUDIO (Fissa e Persistente)
   const [studioBrand, setStudioBrand] = useState(DEFAULT_STUDIO_BRAND);
 
-  // Stato 2: WORKSPACE DI LAVORO (Dinamico per i clienti)
   const [workspaceState, setWorkspaceState] = useState({
     ...DEFAULT_STUDIO_BRAND,
     text1: 'NUOVO',
@@ -36,7 +40,6 @@ const App: React.FC = () => {
     subtitle: 'CLIENTE'
   });
 
-  // Caricamento dell'identità dello studio all'avvio
   useEffect(() => {
     const savedIdentity = localStorage.getItem(STUDIO_IDENTITY_KEY);
     if (savedIdentity) {
@@ -48,15 +51,23 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Funzione per aggiornare l'identità dell'app (chiamata dal BrandKit)
   const handleUpdateStudioIdentity = (newIdentity: any) => {
-    const updated = {
-      ...newIdentity,
-      text1: newIdentity.text1 || 'SEK',
-      text2: newIdentity.text2 || 'COMIX'
+    const updatedBrand = {
+      ...DEFAULT_STUDIO_BRAND,
+      ...newIdentity
     };
-    setStudioBrand(updated);
-    localStorage.setItem(STUDIO_IDENTITY_KEY, JSON.stringify(updated));
+    setStudioBrand(updatedBrand);
+    localStorage.setItem(STUDIO_IDENTITY_KEY, JSON.stringify(updatedBrand));
+  };
+
+  const handleSendToWorkspace = (imageUrl: string) => {
+    setWorkspaceState(prev => ({
+      ...prev,
+      customImage: imageUrl,
+      showIcon: true
+    }));
+    const builderElement = document.getElementById('brand-builder-section');
+    if (builderElement) builderElement.scrollIntoView({ behavior: 'smooth' });
   };
 
   if (view === 'marketing') {
@@ -130,8 +141,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-brand-accent selection:text-black overflow-x-hidden bg-[#020205] animate-fade-in">
-      
-      {/* Header Premium - Logo Fisso dello Studio (Navigazione disattivata come richiesto) */}
       <header className="sticky top-0 z-50 bg-[#0f0c29]/90 backdrop-blur-xl border-b border-white/10 shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-24 flex items-center justify-between">
           <div>
@@ -141,14 +150,8 @@ const App: React.FC = () => {
               className="scale-75 md:scale-100 origin-left" 
             />
           </div>
-          
           <div className="flex items-center gap-3 md:gap-6">
-            <button 
-              onClick={() => setView('marketing')}
-              className="hidden md:flex px-5 py-2.5 border border-white/20 rounded-full text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all shadow-lg active:scale-95"
-            >
-              Vision Mode
-            </button>
+            <button onClick={() => setView('marketing')} className="hidden md:flex px-5 py-2.5 border border-white/20 rounded-full text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all shadow-lg active:scale-95">Vision Mode</button>
             <div className="flex items-center gap-3 text-brand-accent bg-brand-accent/20 px-5 py-2.5 rounded-full border border-brand-accent/40 shadow-[0_0_15px_rgba(0,242,96,0.1)]">
               <Zap size={14} className="animate-pulse" />
               <span className="text-[10px] font-black uppercase tracking-widest">v2.5 Flash Ultra</span>
@@ -158,31 +161,24 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-grow flex flex-col items-center w-full relative">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brand-accent/10 rounded-full blur-[120px] pointer-events-none"></div>
-        <div className="absolute bottom-[20%] right-[-10%] w-[40%] h-[40%] bg-brand-accent2/10 rounded-full blur-[120px] pointer-events-none"></div>
-
         <div className="relative z-10 w-full pt-8 md:pt-14 pb-14">
           <div className="text-center mb-12 px-4 animate-slide-up">
             <h2 className="text-[11px] font-black uppercase tracking-[0.6em] text-brand-accent mb-3 drop-shadow-[0_0_100px_rgba(0,242,96,0.3)]">Laboratorio di Creazione</h2>
-            <div className="w-16 h-1.5 bg-brand-accent mx-auto rounded-full shadow-[0_0_15px_#00f260]"></div>
+            <div className="w-16 h-1.5 bg-brand-accent mx-auto rounded-full shadow-[0_0_15px_#00f260"></div>
           </div>
-
-          <ImageEditor />
-          <BrandKit 
-            globalState={workspaceState} 
-            setGlobalState={setWorkspaceState} 
-            onSetAsStudio={handleUpdateStudioIdentity}
-          />
+          <ImageEditor onSendToBuilder={handleSendToWorkspace} />
+          <div id="brand-builder-section">
+            <BrandKit globalState={workspaceState} setGlobalState={setWorkspaceState} onSetAsStudio={handleUpdateStudioIdentity} />
+          </div>
         </div>
       </main>
 
       <footer className="border-t border-white/10 bg-black/80 backdrop-blur-md py-14 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-10 text-center md:text-left">
           <div className="flex flex-col items-center md:items-start gap-3">
-            <BrandLogo size="sm" showIcon={false} text1={studioBrand.text1} text2={studioBrand.text2} className="opacity-60 grayscale brightness-150" />
+            <BrandLogo size="sm" showIcon={false} text1={studioBrand.text1} text2={studioBrand.text2} color={studioBrand.color} className="opacity-60 grayscale brightness-150" />
             <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.5em]">L'ERA DIGITALE È QUI</p>
           </div>
-          
           <div className="flex flex-col items-center md:items-end gap-2">
             <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">
               &copy; {new Date().getFullYear()} {studioBrand.text1} {studioBrand.text2} STUDIO • DEFINIAMO NUOVE ERE
