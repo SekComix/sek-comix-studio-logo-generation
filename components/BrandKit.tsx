@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrandLogo, ICON_MAP } from './BrandLogo';
 import { generateIconImage } from '../services/geminiService';
+import html2canvas from 'html2canvas';
 import { 
   Download, Sparkles, Palette, Trash2, PenTool, RefreshCw, 
   Folder, Star, ChevronDown, ChevronRight, Fingerprint, Eye, 
@@ -9,12 +10,6 @@ import {
   RotateCcw, Settings2, Hash, Flame, Zap, Heart, Rocket, Move,
   Archive, Maximize2, CheckSquare, Square, CheckCircle2
 } from 'lucide-react';
-
-declare global {
-  interface Window {
-    html2canvas: any;
-  }
-}
 
 const STORAGE_KEY = 'sek_studio_vault_vFinal_2025';
 
@@ -204,7 +199,7 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
     const element = document.getElementById('active-logo-canvas');
     if (!element) return;
     try {
-      const canvas = await window.html2canvas(element, { backgroundColor: null, scale: 2, useCORS: true });
+      const canvas = await html2canvas(element, { backgroundColor: null, scale: 2, useCORS: true });
       const link = document.createElement('a');
       link.download = `Logo_${globalState.text1}.png`;
       link.href = canvas.toDataURL('image/png');
@@ -244,13 +239,10 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
 
   const renderArchiveIcon = (cat: CustomCategory, size: number = 18) => {
     if (cat.customImage) return <img src={cat.customImage} className="object-contain" style={{ width: size, height: size }} />;
-    
-    // Se l'icona è nascosta ma lo sticker è attivo, mostra lo sticker nell'anteprima
     if (!cat.showIcon && cat.showSticker && cat.sticker) {
       const stickerIcon = STICKER_LIST.find(s => s.id === cat.sticker)?.icon;
       return stickerIcon ? React.cloneElement(stickerIcon, { size }) : <Star size={size} />;
     }
-    
     const IconComp = ICON_MAP[cat.iconKey] || Palette;
     return <IconComp size={size} />;
   };
@@ -322,12 +314,11 @@ export const BrandKit: React.FC<BrandKitProps> = ({ globalState, setGlobalState,
           
           <button onClick={() => setShowIdentityPicker(true)} className="flex-1 min-w-[180px] py-4 px-6 rounded-full text-[10px] font-black uppercase transition-all flex items-center justify-center gap-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black shadow-lg hover:scale-105 active:scale-95"><Award size={18}/> CAMBIA TUO LOGO</button>
           
-          <button onClick={saveCurrentAsCategory} className={`flex-1 min-w-[100px] py-4 rounded-full text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${saveSuccess ? 'bg-green-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}>{saveSuccess ? <Check size={16}/> : <Save size={16}/>} Salva nel Vault</button>
+          <button onClick={saveCurrentAsCategory} className={`flex-1 min-w-[100px] py-4 rounded-full text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${saveSuccess ? 'bg-green-500 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}>{saveSuccess ? <Check size={16}/> : <Save size={16}/>} Salva I TUOI LOGHI</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        {/* SIDEBAR SINISTRA */}
         <div className="lg:col-span-4 space-y-3">
           {activeTab === 'editor' && (
             <div className="space-y-3">
