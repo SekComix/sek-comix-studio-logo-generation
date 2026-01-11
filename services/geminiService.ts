@@ -1,3 +1,6 @@
+GeminiService
+
+
 import { GoogleGenAI } from "@google/genai";
 
 const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -87,3 +90,4 @@ export const generateBrandIdentity = async (description: string): Promise<any> =
     return JSON.parse(result.text || "{}");
   } catch (error) { return { iconKey: 'palette', colorHex: '#00f260', subtitle: 'STUDIO' }; }
 };
+
