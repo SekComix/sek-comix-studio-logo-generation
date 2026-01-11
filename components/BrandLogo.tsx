@@ -125,7 +125,9 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             width: `${iconBaseSize}px`, 
             height: `${iconBaseSize}px`,
             objectFit: 'contain',
-            filter: `brightness(1.2) drop-shadow(0 0 ${6 * currentScale}px ${color})`,
+            // mix-blend-mode: screen rende trasparente il nero, perfetto per loghi isolati su fondo scuro
+            mixBlendMode: 'screen',
+            filter: `brightness(1.5) drop-shadow(0 0 ${4 * currentScale}px ${color})`,
           }}
         />
       );
