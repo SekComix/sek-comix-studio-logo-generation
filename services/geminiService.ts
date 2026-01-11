@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 const getAiClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -35,6 +36,7 @@ export const editImageWithGemini = async (base64Image: string, mimeType: string,
     }
     throw new Error("Immagine non generata correttamente.");
   } catch (error: any) {
+    console.error("Gemini Edit Error:", error);
     throw new Error("Errore AI: " + error.message);
   }
 };
@@ -42,10 +44,17 @@ export const editImageWithGemini = async (base64Image: string, mimeType: string,
 export const generateIconImage = async (prompt: string, brandColor: string): Promise<string> => {
   const ai = getAiClient();
   try {
-    const aiPrompt = `Flat vector logo icon of ${prompt}, minimal style, white background, color ${brandColor}. No text. High resolution.`;
+    // CAMBIO FONDAMENTALE: chiediamo fondo nero per poterlo rendere trasparente nel CSS
+    const aiPrompt = `Flat vector logo icon of ${prompt}. Minimalist, professional, sharp clean edges. Color palette: ${brandColor}. IMPORTANT: The icon must be isolated on a solid DEEP BLACK background. NO TEXT, NO LETTERS, NO WORDS.`;
+    
     const result = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: { parts: [{ text: aiPrompt }] }
+      contents: { parts: [{ text: aiPrompt }] },
+      config: {
+        imageConfig: {
+          aspectRatio: "1:1"
+        }
+      }
     });
 
     if (result.candidates?.[0]?.content?.parts) {
@@ -55,9 +64,10 @@ export const generateIconImage = async (prompt: string, brandColor: string): Pro
         }
       }
     }
-    throw new Error("Generazione fallita.");
-  } catch (error) { 
-    throw new Error("Errore generazione icona AI."); 
+    throw new Error("Il modello non ha restituito un'immagine valida.");
+  } catch (error: any) { 
+    console.error("Gemini Icon Generation Error:", error);
+    throw new Error("Errore generazione icona AI: " + (error.message || "Errore sconosciuto")); 
   }
 };
 
@@ -87,4 +97,3 @@ export const generateBrandIdentity = async (description: string): Promise<any> =
     return JSON.parse(result.text || "{}");
   } catch (error) { return { iconKey: 'palette', colorHex: '#00f260', subtitle: 'STUDIO' }; }
 };
-
