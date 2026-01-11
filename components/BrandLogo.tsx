@@ -1,15 +1,42 @@
 
 import React from 'react';
-import { Palette, Sparkles, Flame, Zap, Star, Heart, Rocket } from 'lucide-react';
+import { 
+  Palette, Sparkles, Flame, Zap, Star, Heart, Rocket,
+  Camera, Music, Gamepad, Code, Briefcase, ShoppingCart, 
+  Utensils, Crown, Leaf, Plane, Dumbbell, Book, Home, Car
+} from 'lucide-react';
+
+export const ICON_MAP: Record<string, any> = {
+  'palette': Palette,
+  'camera': Camera,
+  'music': Music,
+  'gamepad': Gamepad,
+  'code': Code,
+  'briefcase': Briefcase,
+  'shopping-cart': ShoppingCart,
+  'utensils': Utensils,
+  'star': Star,
+  'heart': Heart,
+  'zap': Zap,
+  'crown': Crown,
+  'leaf': Leaf,
+  'rocket': Rocket,
+  'plane': Plane,
+  'dumbbell': Dumbbell,
+  'book': Book,
+  'home': Home,
+  'car': Car,
+};
 
 interface BrandLogoProps {
   id?: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showIcon?: boolean;
+  iconKey?: string;
   customIcon?: React.ReactNode;
-  customImageSrc?: string | null;
-  customColor?: string;
+  customImage?: string | null;
+  color?: string;
   subtitle?: string;
   showSubtitle?: boolean;
   theme?: 'dark' | 'light';
@@ -22,6 +49,8 @@ interface BrandLogoProps {
   iconPos?: { x: number; y: number };
   sticker?: string | null;
   stickerConfig?: { x: number; y: number; scale: number };
+  taglineConfig?: { x: number; y: number; scale: number };
+  separatorConfig?: { x: number; y: number; scale: number };
 }
 
 const STICKER_MAP: Record<string, any> = {
@@ -38,9 +67,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   className = '', 
   size = 'md',
   showIcon = true,
+  iconKey = 'palette',
   customIcon,
-  customImageSrc,
-  customColor = '#00f260',
+  customImage,
+  color = '#00f260',
   subtitle,
   showSubtitle = true,
   theme = 'dark',
@@ -52,9 +82,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   iconScale = 1,
   iconPos = { x: 0, y: 0 },
   sticker = null,
-  stickerConfig = { x: 0, y: 0, scale: 1 }
+  stickerConfig = { x: 0, y: 0, scale: 1 },
+  taglineConfig = { x: 0, y: 0, scale: 1 },
+  separatorConfig = { x: 0, y: 0, scale: 1 }
 }) => {
-  // Definizione di una scala matematica per mantenere le proporzioni perfette
   const scaleMap = {
     sm: 0.6,
     md: 1.0,
@@ -63,14 +94,9 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   };
 
   const currentScale = scaleMap[size];
-  
-  // Calcolo delle dimensioni basato sulla scala
   const baseFontSize = 32 * currentScale;
   const iconBaseSize = 36 * currentScale;
   const gapSize = 16 * currentScale;
-  
-  // MIGLIORAMENTO LEGGIBILITÀ TAGLINE:
-  // Aumentato il rapporto dal 28% al 38% e aggiunto un minimo di 11px per mobile.
   const taglineSize = Math.max(baseFontSize * 0.38, 11); 
   const taglineMargin = 14 * currentScale;
   const separatorMargin = 16 * currentScale;
@@ -88,34 +114,52 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
 
   const selectedFontClass = fontClassMap[font] || fontClassMap['orbitron'];
 
+  const renderIcon = () => {
+    if (customImage) {
+      return (
+        <img 
+          src={customImage} 
+          alt="Icon" 
+          crossOrigin="anonymous"
+          style={{ 
+            width: `${iconBaseSize}px`, 
+            height: `${iconBaseSize}px`,
+            objectFit: 'contain',
+            filter: `brightness(1.2) drop-shadow(0 0 ${6 * currentScale}px ${color})`,
+          }}
+        />
+      );
+    }
+    const IconComp = ICON_MAP[iconKey] || Palette;
+    return <IconComp size={iconBaseSize} strokeWidth={2.5} />;
+  };
+
   return (
     <div 
       id={id} 
       className={`flex flex-col items-center justify-center ${className} select-none relative transition-all duration-300`}
       style={{ 
         overflow: 'visible', 
-        padding: `${25 * currentScale}px`, 
+        padding: `${50 * currentScale}px`, 
         minWidth: 'max-content',
         width: 'fit-content'
       }}
     >
-      {/* Sticker Layer */}
       {sticker && STICKER_MAP[sticker] && (
         <div 
           className="absolute z-20 pointer-events-none" 
           style={{ 
-            color: customColor, 
+            color: color, 
             left: `calc(50% + ${stickerConfig.x * currentScale}px)`, 
             top: `calc(50% + ${stickerConfig.y * currentScale}px)`, 
             transform: `translate(-50%, -50%) scale(${stickerConfig.scale * currentScale})`, 
-            filter: `drop-shadow(0 0 ${10 * currentScale}px ${customColor}88)` 
+            filter: `drop-shadow(0 0 ${10 * currentScale}px ${color}88)` 
           }}
         >
           {React.cloneElement(STICKER_MAP[sticker], { size: stickerBaseSize })}
         </div>
       )}
 
-      {/* Main Row: Icon + Texts */}
       <div 
         className={`flex items-center ${selectedFontClass} font-black`} 
         style={{ 
@@ -135,64 +179,44 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
               overflow: 'visible'
             }}
           >
-            <div 
-              className="absolute inset-0 blur-xl opacity-30 rounded-full scale-150" 
-              style={{ background: customColor }}
-            ></div>
-            <div className="relative z-10 flex items-center justify-center">
-              {customImageSrc ? (
-                <img 
-                  src={customImageSrc} 
-                  alt="Icon" 
-                  crossOrigin="anonymous"
-                  style={{ 
-                    width: `${iconBaseSize}px`, 
-                    height: `${iconBaseSize}px`,
-                    objectFit: 'contain',
-                    filter: `brightness(1.2) drop-shadow(0 0 ${6 * currentScale}px ${customColor})`,
-                  }}
-                />
-              ) : (
-                <div style={{ color: customColor }}>
-                  {customIcon ? React.cloneElement(customIcon as React.ReactElement<{ size?: number }>, { size: iconBaseSize }) : <Palette size={iconBaseSize} strokeWidth={2.5} />}
-                </div>
-              )}
+            <div className="absolute inset-0 blur-xl opacity-30 rounded-full scale-150" style={{ background: color }}></div>
+            <div className="relative z-10 flex items-center justify-center" style={{ color: color }}>
+              {renderIcon()}
             </div>
           </div>
         )}
         
         <div className="flex items-center whitespace-nowrap leading-none uppercase" style={{ overflow: 'visible' }}>
           <span className="drop-shadow-2xl" style={{ color: baseTextColor }}>{text1}</span>
-          
           {showSeparator && (
             <span 
-              className="font-black" 
+              className="font-black inline-block" 
               style={{ 
-                color: customColor,
-                margin: `0 ${separatorMargin}px`,
-                fontSize: `${baseFontSize * 0.8}px`
+                color: color, 
+                margin: `0 ${separatorMargin}px`, 
+                fontSize: `${baseFontSize * 0.8}px`,
+                transform: `translate(${separatorConfig.x * currentScale}px, ${separatorConfig.y * currentScale}px) scale(${separatorConfig.scale})`,
+                transition: 'transform 0.1s linear'
               }}
             >
               {separatorText === ' ' ? '\u00A0' : separatorText}
             </span>
           )}
-
-          <span style={{ color: customColor }}>{text2}</span>
+          <span style={{ color: color }}>{text2}</span>
         </div>
       </div>
       
-      {/* Subtitle Row: Tagline (Terza Casella) */}
       {subtitle && showSubtitle && (
-         <div 
-           className="font-sans font-black uppercase text-center italic opacity-100 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] whitespace-nowrap" 
+         <div className="font-sans font-black uppercase text-center italic opacity-100 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] whitespace-nowrap" 
            style={{ 
-             color: customColor,
-             fontSize: `${taglineSize}px`,
-             marginTop: `${taglineMargin}px`,
-             letterSpacing: `${0.35 * currentScale}em`, // Tracking ottimizzato
-             width: '100%'
-           }}
-         >
+             color: color, 
+             fontSize: `${taglineSize}px`, 
+             marginTop: `${taglineMargin}px`, 
+             letterSpacing: `${0.35 * currentScale}em`, 
+             width: '100%',
+             transform: `translate(${taglineConfig.x * currentScale}px, ${taglineConfig.y * currentScale}px) scale(${taglineConfig.scale})`,
+             transition: 'transform 0.1s linear'
+           }}>
            {subtitle}
          </div>
       )}
