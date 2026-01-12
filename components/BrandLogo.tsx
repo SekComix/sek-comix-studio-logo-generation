@@ -125,9 +125,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             width: `${iconBaseSize}px`, 
             height: `${iconBaseSize}px`,
             objectFit: 'contain',
-            // La magia: il nero dell'immagine AI diventa trasparente su sfondi scuri
-            mixBlendMode: 'screen',
-            filter: `brightness(1.1) contrast(1.1) drop-shadow(0 0 ${4 * currentScale}px ${color}88)`,
+            mixBlendMode: 'screen', // Rende trasparente il fondo nero delle immagini AI
+            filter: `brightness(1.2) contrast(1.1) drop-shadow(0 0 ${4 * currentScale}px ${color}88)`,
           }}
         />
       );
@@ -147,9 +146,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         width: 'fit-content'
       }}
     >
+      {/* Sticker Layer - Z-Index 30 (Sopra tutto) */}
       {sticker && STICKER_MAP[sticker] && (
         <div 
-          className="absolute z-20 pointer-events-none" 
+          className="absolute z-30 pointer-events-none" 
           style={{ 
             color: color, 
             left: `calc(50% + ${stickerConfig.x * currentScale}px)`, 
@@ -163,16 +163,17 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       )}
 
       <div 
-        className={`flex items-center ${selectedFontClass} font-black`} 
+        className={`flex items-center ${selectedFontClass} font-black relative`} 
         style={{ 
           gap: `${gapSize}px`,
           fontSize: `${baseFontSize}px`,
           overflow: 'visible' 
         }}
       >
+        {/* Icon Layer - Z-Index 10 (Sotto il testo) */}
         {showIcon && (
           <div 
-            className="relative flex items-center justify-center shrink-0" 
+            className="relative z-10 flex items-center justify-center shrink-0" 
             style={{ 
               transform: `translate(${iconPos.x * currentScale}px, ${iconPos.y * currentScale}px) scale(${iconScale})`, 
               width: `${iconBaseSize}px`,
@@ -188,7 +189,8 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
           </div>
         )}
         
-        <div className="flex items-center whitespace-nowrap leading-none uppercase" style={{ overflow: 'visible' }}>
+        {/* Text Layer - Z-Index 20 (Sopra l'icona) */}
+        <div className="relative z-20 flex items-center whitespace-nowrap leading-none uppercase" style={{ overflow: 'visible' }}>
           <span className="drop-shadow-2xl" style={{ color: baseTextColor }}>{text1}</span>
           {showSeparator && (
             <span 
@@ -208,8 +210,9 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
         </div>
       </div>
       
+      {/* Tagline Layer - Z-Index 20 */}
       {subtitle && showSubtitle && (
-         <div className="font-sans font-black uppercase text-center italic opacity-100 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] whitespace-nowrap" 
+         <div className="relative z-20 font-sans font-black uppercase text-center italic opacity-100 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)] whitespace-nowrap" 
            style={{ 
              color: color, 
              fontSize: `${taglineSize}px`, 
